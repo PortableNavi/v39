@@ -4,8 +4,10 @@
 
 pub mod error;
 pub mod prelude;
+pub mod interfaces;
 
 use prelude::*;
+use interfaces::app::App;
 
 use pretty_env_logger::{env_logger::Env, env_logger::fmt::Formatter};
 use log::Record;
@@ -16,12 +18,15 @@ use std::env;
 extern crate log;
 
 
-pub fn init() -> V39Result<()>
+pub fn init() -> V39Result<&'static App>
 {
     init_logger()?;
     info!("Logger initialized");
 
-    Ok(())
+    App::init()?;
+    info!("App Interface initialized");
+
+    Ok(App::get())
 }
 
 
