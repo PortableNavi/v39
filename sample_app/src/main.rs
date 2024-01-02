@@ -4,6 +4,13 @@ use v39::{self, prelude::*};
 struct App;
 impl EventReceiver for App
 {
+    fn reset(&mut self, handler: &mut EventHandlerInterface) -> V39Result<()>
+    {
+        println!("Reset!");
+        handler.queue_event(Event::new(CustomEvent::Ping, vec![]));
+        Ok(())
+    }
+
     fn dispatch_event(&mut self, event: Event, handler: &mut EventHandlerInterface) -> V39Result<()> 
     {
         if CustomEvent::Ping.eq(event.id)
@@ -26,13 +33,10 @@ impl EventReceiver for App
 fn main() -> V39Result<()>
 {
     let app = v39::init()?;
-
-    let event = Event::new(CustomEvent::Ping, vec![]);
     
     if let Ok(mut event_handler) = app.event_handler().lock()
     {
         event_handler.add_receiver(App);
-        event_handler.queue_event(event);
     }
 
     app.run()

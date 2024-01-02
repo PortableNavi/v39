@@ -41,10 +41,15 @@ impl App
 
     pub fn run(&self) -> V39Result<()>
     {
+        info!("Starting main loop");
+
         if let Ok(mut handler) = self.event_handler().lock()
         {
+            handler.queue_engine_event(crate::event::EngineEvent::Reset);
+            handler.fire_engine_event(crate::event::EngineEvent::Reset);
+
             // Just do it a few times for testing
-            for _ in 0..10
+            for _ in 0..4
             {
                 handler.fire_events();
             }

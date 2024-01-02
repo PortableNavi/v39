@@ -39,7 +39,34 @@ impl EventHandlerInterface
 
     pub(crate) fn fire_engine_event(&mut self, event_kind: EngineEvent) -> V39Result<()>
     {
-        todo!()
+        trace!("Begin dispathing {event_kind:?} engine events...");
+
+        let events = self.handler.engine_events.drain(..).collect::<Vec<_>>();
+
+        for event in events
+        {
+            if event.var_eq(&event_kind)
+            {
+                for handler in &mut self.handler.receiver
+                {
+                    match event
+                    {
+                        EngineEvent::Reset => handler.reset(&mut EventHandlerInterface{handler: EventHandler::get()})?,
+                        EngineEvent::Tick(_) => (),
+                        EngineEvent::FixedTick(_) => (),
+                        EngineEvent::Quit(_) => (), 
+                    }
+                }
+            }
+
+            else
+            {
+                self.handler.engine_events.push(event);
+            }
+        }
+
+        trace!("Finished dispathing {event_kind:?} engine events");
+        Ok(())
     }
 
     pub(crate) fn fire_events(&mut self) -> V39Result<()>

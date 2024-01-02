@@ -7,4 +7,9 @@ pub trait EventReceiver
     {
         Ok(())
     }
+
+    fn reset(&mut self, handler: &mut EventHandlerInterface) -> V39Result<()>
+    {
+        Ok(())
+    }
 }

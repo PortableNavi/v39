@@ -49,10 +49,19 @@ impl EventHandler
 
 
 #[derive(Debug, Clone)]
-pub enum EngineEvent
+pub(crate) enum EngineEvent
 {
     Reset,
     Tick(Option<f32>),
     FixedTick(Option<f32>),
     Quit(Option<u32>),
+}
+
+
+impl EngineEvent
+{
+    pub(crate) fn var_eq(&self, other: &Self) -> bool
+    {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
 }
