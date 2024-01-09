@@ -9,7 +9,7 @@ static INSTANCE: OnceCell<App> = OnceCell::new();
 
 pub struct App
 {
-    event_handler: Mutex<EventHandlerInterface>,
+    event_handler: EventHandlerInterface,
 }
 
 
@@ -17,7 +17,7 @@ impl App
 {
     pub(crate) fn init() -> V39Result<()>
     {
-        let event_handler = Mutex::new(EventHandlerInterface::new()?);
+        let event_handler = EventHandlerInterface::new()?;
 
         let app = App {event_handler};
 
@@ -34,7 +34,7 @@ impl App
         INSTANCE.get().expect("App instance was not initialized")
     }
 
-    pub fn event_handler(&self) -> &Mutex<EventHandlerInterface>
+    pub fn event_handler(&self) -> &EventHandlerInterface
     {
         &self.event_handler
     }
@@ -43,16 +43,15 @@ impl App
     {
         info!("Starting main loop");
 
-        if let Ok(mut handler) = self.event_handler().lock()
-        {
-            handler.queue_engine_event(crate::event::EngineEvent::Reset);
-            handler.fire_engine_event(crate::event::EngineEvent::Reset);
+        let handler = &self.event_handler;
 
-            // Just do it a few times for testing
-            for _ in 0..4
-            {
-                handler.fire_events();
-            }
+        handler.queue_engine_event(crate::event::EngineEvent::Reset);
+        handler.fire_engine_event(crate::event::EngineEvent::Reset);
+
+        // Just do it a few times for testing
+        for _ in 0..4
+        {
+            handler.fire_events();
         }
 
         Ok(())

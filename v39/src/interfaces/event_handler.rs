@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 pub struct EventHandlerInterface
 {
-    handler: &'static mut EventHandler,
+    handler: &'static EventHandler,
 }
 
 
@@ -17,75 +17,69 @@ impl EventHandlerInterface
         Ok(Self {handler})
     }
 
-    pub fn add_receiver<T>(&mut self, receiver: T)
+    pub fn add_receiver<T>(&self, receiver: T)
         where T: EventReceiver + Send + Sync + 'static
     {
         trace!("New EventReceiver registered");
         let receiver = Box::new(receiver);
-        self.handler.receiver.push(receiver);
+        self.handler.record_receiver(receiver);
     }
 
-    pub fn queue_event(&mut self, event: Event)
+    pub fn queue_event(&self, event: Event)
     {
         trace!("Event queued: {event:?}");
-        self.handler.events.push(event);
+        self.handler.record_event(event);
     }
 
-    pub(crate) fn queue_engine_event(&mut self, event: EngineEvent)
+    pub(crate) fn queue_engine_event(&self, event: EngineEvent)
     {
         trace!("EngineEvent queued: {event:?}");
-        self.handler.engine_events.push(event);
+        self.handler.record_engine_event(event);
     }
 
-    pub(crate) fn fire_engine_event(&mut self, event_kind: EngineEvent) -> V39Result<()>
+    pub(crate) fn fire_engine_event(&self, event_kind: EngineEvent) -> V39Result<()>
     {
         trace!("Begin dispathing {event_kind:?} engine events...");
 
-        let events = self.handler.engine_events.drain(..).collect::<Vec<_>>();
-
+        self.handler.snapchot_receiver_queue();
+        self.handler.snapshot_engine_event_queue(|e| e.var_eq(&event_kind));
+        
+        let events = self.handler.fetch_engine_event_snapshots();
+ 
         for event in events
         {
-            if event.var_eq(&event_kind)
-            {
-                for handler in &mut self.handler.receiver
+            self.handler.foreach_receiver_snapshot(|rec|{
+                match event
                 {
-                    match event
-                    {
-                        EngineEvent::Reset => handler.reset(&mut EventHandlerInterface{handler: EventHandler::get()})?,
-                        EngineEvent::Tick(_) => (),
-                        EngineEvent::FixedTick(_) => (),
-                        EngineEvent::Quit(_) => (), 
-                    }
+                    EngineEvent::Reset => rec.reset(),
+                    EngineEvent::Tick(_) => Ok(()),
+                    EngineEvent::FixedTick(_) => Ok(()),
+                    EngineEvent::Quit(_) => Ok(()), 
                 }
-            }
 
-            else
-            {
-                self.handler.engine_events.push(event);
-            }
+            });
         }
 
+        self.handler.apply_receiver_snapshot();
         trace!("Finished dispathing {event_kind:?} engine events");
         Ok(())
     }
 
-    pub(crate) fn fire_events(&mut self) -> V39Result<()>
+    pub(crate) fn fire_events(&self) -> V39Result<()>
     {
         trace!("Begin dispatching events...");
+        
+        self.handler.snapchot_receiver_queue();
+        self.handler.snapchot_event_queue();
 
-        for i in 0..self.handler.receiver.len()
+        let mut events = self.handler.fetch_event_snapshots();
+
+        while let Some(e) = events.pop()
         {
-           for event in self.handler.events.drain(..)
-           {
-               self.handler.receiver[i].dispatch_event(event.clone(),
-                   // This is ok because this reference does not live longer than this function
-                   // call and the call to fire_events(..) is behind a mutex.
-                   // Since fire_events() does not do anything asynchronos while a second mutable
-                   // reference to the EventHandler exists it should be safe...
-                   &mut EventHandlerInterface{handler: EventHandler::get()}
-               )?;
-           }
+            self.handler.foreach_receiver_snapshot(|rec| rec.dispatch_event(e.to_owned()));
         }
+
+        self.handler.apply_receiver_snapshot();
 
         trace!("Finished dispatching events");
         Ok(())
