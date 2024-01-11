@@ -6,6 +6,7 @@ pub mod error;
 pub mod prelude;
 pub mod interfaces;
 pub mod event;
+pub mod input;
 
 use prelude::*;
 use interfaces::app::App;

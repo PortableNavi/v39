@@ -40,6 +40,7 @@ impl EventHandlerInterface
     pub(crate) fn fire_engine_event(&self, event_kind: EngineEvent) -> V39Result<()>
     {
         trace!("Begin dispathing {event_kind:?} engine events...");
+        self.event_dispatch_begin();
 
         self.handler.snapchot_receiver_queue();
         self.handler.snapshot_engine_event_queue(|e| e.var_eq(&event_kind));
@@ -49,18 +50,12 @@ impl EventHandlerInterface
         for event in events
         {
             self.handler.foreach_receiver_snapshot(|rec|{
-                match event
-                {
-                    EngineEvent::Reset => rec.reset(),
-                    EngineEvent::Tick(_) => Ok(()),
-                    EngineEvent::FixedTick(_) => Ok(()),
-                    EngineEvent::Quit(_) => Ok(()), 
-                }
-
+                self.match_event(event.clone(), rec)
             });
         }
 
         self.handler.apply_receiver_snapshot();
+        self.event_dispatch_end();
         trace!("Finished dispathing {event_kind:?} engine events");
         Ok(())
     }
@@ -68,6 +63,7 @@ impl EventHandlerInterface
     pub(crate) fn fire_events(&self) -> V39Result<()>
     {
         trace!("Begin dispatching events...");
+        self.event_dispatch_begin();
         
         self.handler.snapchot_receiver_queue();
         self.handler.snapchot_event_queue();
@@ -80,8 +76,52 @@ impl EventHandlerInterface
         }
 
         self.handler.apply_receiver_snapshot();
-
+        
+        self.event_dispatch_end();
         trace!("Finished dispatching events");
         Ok(())
+    }
+
+    pub(crate) fn fire_single_engine_event(&self, event: EngineEvent) -> V39Result<()>
+    {
+        trace!("Begin Single EngineEvent Dispatch of {event:?}");
+        self.event_dispatch_begin();
+        self.handler.snapchot_receiver_queue();
+
+        self.handler.foreach_receiver_snapshot(|rec| {
+            self.match_event(event.clone(), rec)
+        });
+
+        self.handler.apply_receiver_snapshot();
+        self.event_dispatch_end();
+        trace!("End Single Event Dispatch of {event:?}");
+
+        Ok(())
+    }
+
+    pub(crate) fn event_dispatch_begin(&self)
+    {
+        get_v39().input_manager().event_begin();
+    }
+
+    pub(crate) fn event_dispatch_end(&self)
+    {
+        get_v39().input_manager().event_end();
+    }
+
+    fn match_event(&self,  event: EngineEvent, rec: &mut Box<dyn EventReceiver + Send + Sync>) -> V39Result<()>
+    {
+        match event
+        {
+            EngineEvent::Reset => rec.reset(),
+            EngineEvent::KeyUp(Some(key)) => rec.key_up(key),
+            EngineEvent::KeyDown(Some(key)) => rec.key_down(key),
+            EngineEvent::FrameBegin => rec.frame_begin(),
+            EngineEvent::FrameEnd => rec.frame_end(),
+            EngineEvent::Tick(Some(_)) => rec.tick(),
+            EngineEvent::Quit(Some(reason)) => rec.quit(reason),
+            
+            _ => Ok(()),
+        }
     }
 }

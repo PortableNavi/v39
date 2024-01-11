@@ -172,7 +172,9 @@ impl EventHandler
 #[derive(Debug, Clone)]
 pub(crate) enum EngineEvent
 {
-    Reset,
+    Reset, FrameBegin, FrameEnd,
+    KeyDown(Option<input::V39Key>),
+    KeyUp(Option<input::V39Key>),
     Tick(Option<f32>),
     FixedTick(Option<f32>),
     Quit(Option<u32>),
