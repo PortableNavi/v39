@@ -6,6 +6,12 @@ use crate::input::InputManager;
 use crate::event::EngineEvent;
 use crate::prelude::*;
 
+use winit::{
+    event::{Event, WindowEvent, KeyEvent, ElementState},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+    keyboard::PhysicalKey,
+};
 
 static INSTANCE: OnceCell<App> = OnceCell::new();
 
@@ -61,60 +67,55 @@ impl App
 
     pub fn run(&self) -> V39Result<()>
     {
-        info!("Starting main loop");
+        //TODO: Wrap the winit errors...
+        let winit_event_loop = EventLoop::new().unwrap();
+        let window = WindowBuilder::new().build(&winit_event_loop).unwrap();
+        winit_event_loop.set_control_flow(ControlFlow::Poll);
 
-        // Order of Events:
-        // 1. Input
-        // 2. FrameBegin
-        // 3. Tick
-        // 4. CustomEvents
-        // 5. LateTick
-        // 7. FrameEnd
+        let event_handler = self.event_handler();
+        self.event_handler.fire_single_engine_event(EngineEvent::Reset);
 
-        let handler = &self.event_handler;
+        winit_event_loop.run(move |e, elwt| {
+            match e
+            {
+                Event::WindowEvent {event: WindowEvent::KeyboardInput {event, ..}, ..} => {
+                    if !event.repeat && let PhysicalKey::Code(key) = event.physical_key
+                    {
+                        let key = Some(input::translate::winit_key_to_v39_key(&key));
 
-        // Simulating a event loop...
-        handler.fire_single_engine_event(EngineEvent::Reset);
+                        match event.state
+                        {
+                            ElementState::Pressed => event_handler.queue_engine_event(EngineEvent::KeyDown(key)),
+                            ElementState::Released => event_handler.queue_engine_event(EngineEvent::KeyUp(key)),
+                        }
+                    }
+                },
 
-        handler.fire_single_engine_event(EngineEvent::KeyDown(Some(input::V39Key::A)));
-        handler.fire_single_engine_event(EngineEvent::FrameBegin);
-        handler.fire_single_engine_event(EngineEvent::Tick(Some(0.0f32)));
-        handler.fire_events();
-        handler.fire_single_engine_event(EngineEvent::FrameEnd);
+                Event::WindowEvent {event, ..} => {
+                    match event
+                    {
+                        WindowEvent::CloseRequested => event_handler.fire_single_engine_event(EngineEvent::WindowClose),
+                        _ => Ok(()),
+                    };
+                },
 
-        for _ in 0..2
-        {
-            handler.fire_single_engine_event(EngineEvent::FrameBegin);
-            handler.fire_single_engine_event(EngineEvent::Tick(Some(0.0f32)));
-            handler.fire_events();
-            handler.fire_single_engine_event(EngineEvent::FrameEnd);
-        }
+                _ => ()   
+            }
 
-        handler.fire_single_engine_event(EngineEvent::KeyUp(Some(input::V39Key::A)));
-        handler.fire_single_engine_event(EngineEvent::FrameBegin);
-        handler.fire_single_engine_event(EngineEvent::Tick(Some(0.0f32)));
-        handler.fire_events();
-        handler.fire_single_engine_event(EngineEvent::FrameEnd);
+            if let Ok(quit) = self.quit.lock()
+            {
+                if *quit {elwt.exit();}
+            }
 
-        for _ in 0..2
-        {
-            handler.fire_single_engine_event(EngineEvent::FrameBegin);
-            handler.fire_single_engine_event(EngineEvent::Tick(Some(0.0f32)));
-            handler.fire_events();
-            handler.fire_single_engine_event(EngineEvent::FrameEnd);
-        }
+            event_handler.fire_engine_event(EngineEvent::KeyDown(None));
+            event_handler.fire_engine_event(EngineEvent::KeyUp(None));
+            event_handler.fire_single_engine_event(EngineEvent::FrameBegin);
+            event_handler.fire_single_engine_event(EngineEvent::Tick(Some(0.0f32)));
+            event_handler.fire_events();
+            event_handler.fire_single_engine_event(EngineEvent::FrameEnd);
+        });
 
-        handler.fire_single_engine_event(EngineEvent::KeyDown(Some(input::V39Key::Q)));
-        handler.fire_single_engine_event(EngineEvent::FrameBegin);
-        handler.fire_single_engine_event(EngineEvent::Tick(Some(0.0f32)));
-        handler.fire_events();
-        handler.fire_single_engine_event(EngineEvent::FrameEnd);
-
-
-        if *self.quit.lock().unwrap()
-        {
-            handler.fire_single_engine_event(EngineEvent::Quit(Some(0)));
-        }
+        event_handler.fire_single_engine_event(EngineEvent::Quit(Some(0)));
 
         Ok(())
     }

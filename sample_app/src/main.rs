@@ -15,8 +15,12 @@ impl EventReceiver for App
     fn tick(&mut self) -> V39Result<()>
     {
         let manager = get_v39().input_manager();
-        println!("A Key is down: {}", manager.is_down(input::V39Key::A));
-        println!("A Key is held: {}", manager.is_held(input::V39Key::A));
+
+        if manager.is_down(input::V39Key::A)
+        {
+            println!("A was pressed");
+        }
+
         Ok(())
     }
 
@@ -26,34 +30,32 @@ impl EventReceiver for App
 
         if CustomEvent::Ping.eq(event.id)
         {
-            println!("Ping");
+            //println!("Ping");
             handler.queue_event(Event::new(CustomEvent::Pong, vec![]));
         }
 
         else if CustomEvent::Pong.eq(event.id)
         {
-            println!("Pong");
+            //println!("Pong");
             handler.queue_event(Event::new(CustomEvent::Ping, vec![]));
         }
 
         Ok(())
     }
 
-    fn key_up(&mut self, key: input::V39Key) -> V39Result<()>
-    {
-        println!("KeyUp: {key:?}");
-        Ok(())
-    }
-
     fn key_down(&mut self, key: input::V39Key) -> V39Result<()>
     {
-        println!("KeyDown: {key:?}");
-
         if key == input::V39Key::Q
         {
             get_v39().quit();
         }
 
+        Ok(())
+    }
+
+    fn window_close(&mut self) -> V39Result<()>
+    {
+        get_v39().quit();
         Ok(())
     }
 

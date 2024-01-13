@@ -43,4 +43,9 @@ pub trait EventReceiver
         Ok(())
     }
 
+    fn window_close(&mut self) -> V39Result<()>
+    {
+        Ok(())
+    }
+
 }

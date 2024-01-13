@@ -1,6 +1,6 @@
+#![feature(let_chains)]
 #![allow(clippy::suspicious_else_formatting)]
 #![allow(unused)]
-
 
 pub mod error;
 pub mod prelude;

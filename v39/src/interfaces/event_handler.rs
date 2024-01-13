@@ -120,6 +120,7 @@ impl EventHandlerInterface
             EngineEvent::FrameEnd => rec.frame_end(),
             EngineEvent::Tick(Some(_)) => rec.tick(),
             EngineEvent::Quit(Some(reason)) => rec.quit(reason),
+            EngineEvent::WindowClose => rec.window_close(),
             
             _ => Ok(()),
         }

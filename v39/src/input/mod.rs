@@ -1,4 +1,4 @@
-mod translate;
+pub(crate) mod translate;
 
 pub mod codes;
 pub use codes::{V39Pad, V39Key};

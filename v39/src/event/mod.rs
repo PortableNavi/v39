@@ -178,6 +178,11 @@ pub(crate) enum EngineEvent
     Tick(Option<f32>),
     FixedTick(Option<f32>),
     Quit(Option<u32>),
+    WindowClose,
+    WindowMinimize,
+    WindowFocus,
+    WindowUnfocus,
+    WindowResize(Option<(u32, u32)>),
 }
 
 

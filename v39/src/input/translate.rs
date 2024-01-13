@@ -8,6 +8,7 @@ pub fn winit_key_to_v39_key(key: &KeyCode) -> V39Key
 
     match key
     {
+        KeyCode::KeyA => V39Key::A,
         KeyCode::KeyQ => V39Key::Q,
         _ => V39Key::Space,
     }
