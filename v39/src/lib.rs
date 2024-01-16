@@ -1,4 +1,4 @@
-#![feature(let_chains)]
+#![feature(let_chains, int_roundings)]
 #![allow(clippy::suspicious_else_formatting)]
 #![allow(unused)]
 
@@ -7,6 +7,7 @@ pub mod prelude;
 pub mod interfaces;
 pub mod event;
 pub mod input;
+pub mod timer;
 
 use prelude::*;
 use interfaces::app::App;

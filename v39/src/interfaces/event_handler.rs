@@ -118,9 +118,12 @@ impl EventHandlerInterface
             EngineEvent::KeyDown(Some(key)) => rec.key_down(key),
             EngineEvent::FrameBegin => rec.frame_begin(),
             EngineEvent::FrameEnd => rec.frame_end(),
-            EngineEvent::Tick(Some(_)) => rec.tick(),
+            EngineEvent::Tick(Some(delta)) => rec.tick(delta),
             EngineEvent::Quit(Some(reason)) => rec.quit(reason),
             EngineEvent::WindowClose => rec.window_close(),
+            EngineEvent::WindowResize(Some(size)) => rec.window_resize(size),
+            EngineEvent::WindowFocus => rec.window_focus(),
+            EngineEvent::WindowUnfocus => rec.window_unfocus(),
             
             _ => Ok(()),
         }

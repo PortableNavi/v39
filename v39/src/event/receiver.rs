@@ -33,7 +33,7 @@ pub trait EventReceiver
         Ok(())
     }
     
-    fn tick(&mut self) -> V39Result<()>
+    fn tick(&mut self, delta: f32) -> V39Result<()>
     {
         Ok(())
     }
@@ -44,6 +44,21 @@ pub trait EventReceiver
     }
 
     fn window_close(&mut self) -> V39Result<()>
+    {
+        Ok(())
+    }
+
+    fn window_resize(&mut self, size: (u32, u32)) -> V39Result<()>
+    {
+        Ok(())
+    }
+
+    fn window_focus(&mut self) -> V39Result<()>
+    {
+        Ok(())
+    }
+
+    fn window_unfocus(&mut self) -> V39Result<()>
     {
         Ok(())
     }
