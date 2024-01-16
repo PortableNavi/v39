@@ -1,8 +1,12 @@
 use once_cell::sync::OnceCell;
+
 use std::sync::Mutex;
+use std::sync::atomic::{Ordering, AtomicPtr};
+
 use crate::interfaces::event_handler::EventHandlerInterface;
 use crate::interfaces::input_manager::InputManagerInterface;
 use crate::interfaces::timer::TimerInterface;
+use crate::interfaces::renderer::RendererInterface;
 use crate::input::InputManager;
 use crate::event::EngineEvent;
 use crate::prelude::*;
@@ -11,8 +15,10 @@ use winit::{
     event::{Event, WindowEvent, KeyEvent, ElementState},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
+    window::Window,
     keyboard::PhysicalKey,
 };
+
 
 static INSTANCE: OnceCell<App> = OnceCell::new();
 
@@ -22,8 +28,23 @@ pub struct App
     event_handler: EventHandlerInterface,
     input_manager: InputManagerInterface,
     timer: TimerInterface,
+    renderer: RendererInterface,
+
+    window: Window,
+    event_loop: Mutex<Option<EventLoop<()>>>,
+
     quit: Mutex<bool>,
 }
+
+
+// This and other rather unelegant methods have been deployed 
+// throughout this file because they are
+// unfourtunately neccessary in order to store the event loop
+// in a struct which contains a raw pointer which is !send...
+// However, since i am not modifing that raw pointer in a multithreaded context,
+// this should be fine... (i hope)
+unsafe impl Sync for App {}
+unsafe impl Send for App {}
 
 
 impl App
@@ -34,10 +55,19 @@ impl App
         let input_manager = InputManagerInterface::new()?;
         let timer = TimerInterface::new()?;
 
+        //TODO: Wrap the winit errors...
+        let event_loop = EventLoop::new().unwrap();
+        let window = WindowBuilder::new().build(&event_loop).unwrap();
+        event_loop.set_control_flow(ControlFlow::Wait);
+        let event_loop = Mutex::new(Some(event_loop));
+
+        let renderer = RendererInterface::new(&window)?;
+
         event_handler.add_receiver(input_manager.clone());
         event_handler.add_receiver(timer.clone());
+        event_handler.add_receiver(renderer.clone());
 
-        let app = App {event_handler, input_manager, timer, quit: Mutex::new(false)};
+        let app = App {event_handler, input_manager, timer, window, event_loop, renderer, quit: Mutex::new(false)};
 
         if INSTANCE.set(app).is_err()
         {
@@ -70,6 +100,12 @@ impl App
         &self.timer
     }
 
+    #[inline]
+    pub fn renderer(&self) -> &RendererInterface
+    {
+        &self.renderer
+    }
+
     pub fn quit(&self)
     {
         *self.quit.lock().unwrap() = true;
@@ -77,17 +113,17 @@ impl App
 
     pub fn run(&self) -> V39Result<()>
     {
-        //TODO: Wrap the winit errors...
-        let winit_event_loop = EventLoop::new().unwrap();
-        let window = WindowBuilder::new().build(&winit_event_loop).unwrap();
-        winit_event_loop.set_control_flow(ControlFlow::Wait);
+        // I deserve to be beaten...
+        let event_loop = self.event_loop
+            .lock().unwrap()
+            .take().unwrap();
 
         std::thread::scope(|s| {
             s.spawn(|| self.main_loop());
 
             let event_handler = self.event_handler();
 
-            winit_event_loop.run(move |e, elwt| {
+            event_loop.run(move |e, elwt| {
                 match e
                 {
                     Event::WindowEvent {event: WindowEvent::KeyboardInput {event, ..}, ..} => {

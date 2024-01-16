@@ -8,6 +8,7 @@ pub mod interfaces;
 pub mod event;
 pub mod input;
 pub mod timer;
+pub mod renderer;
 
 use prelude::*;
 use interfaces::app::App;
