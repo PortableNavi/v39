@@ -8,5 +8,8 @@ pub enum V39Error
     Reinit(String),
 
     #[error("{0}")]
+    NoSuitableDevie(String),
+
+    #[error("{0}")]
     VulkanError(#[from] vulkanalia::vk::ErrorCode),
 }

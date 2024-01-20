@@ -1,11 +1,14 @@
-use crate::prelude::*;
-use vulkanalia::prelude::v1_2::*;
-use vulkanalia::window as vk_window;
 use vulkanalia::loader::{LibloadingLoader, LIBRARY};
-use vulkanalia::{vk::ExtDebugUtilsExtension, vk::KhrSwapchainExtension};
+use vulkanalia::{vk::ExtDebugUtilsExtension, vk::KhrSwapchainExtension, vk::KhrSurfaceExtension};
 use winit::window::Window;
 use std::collections::HashSet;
 use once_cell::sync::OnceCell;
+
+mod device;
+mod render_prelude;
+pub(crate) mod allocator;
+
+use render_prelude::*;
 
 
 pub(crate) const VALIDATION_ENABLED: bool = cfg!(debug_assertions);
@@ -57,7 +60,10 @@ impl Renderer
             _ => None,
         };
 
+        allocator::init_allocator();
         let mut props = VulkanProps::default();
+
+        device::Device::init(&instance, window, &mut props);
 
         let renderer = Renderer {
             props,
@@ -76,7 +82,7 @@ impl Renderer
 
     pub(crate) fn destroy(&mut self)
     {
-
+        self.props.destroy(&self.instance);
     }
 }
 
@@ -84,7 +90,21 @@ impl Renderer
 #[derive(Default)]
 pub(crate) struct VulkanProps
 {
+    device: Option<device::Device>,
+    surface: Option<vk::SurfaceKHR>,
+}
 
+impl VulkanProps
+{
+    fn destroy(&mut self, instance: &Instance)
+    {
+        if let Some(ref mut device) = self.device {device.destroy()}
+        
+        if let Some(surface) = self.surface
+        {
+            unsafe {instance.destroy_surface_khr(surface, alloc())}
+        }
+    }
 }
 
 
@@ -170,7 +190,7 @@ fn create_instance(window: &Window, entry: &Entry, debug_info: &mut Option<vk::D
     }
 
     let app_info = vk::ApplicationInfo::builder()
-        .application_name(b"v39 Test App")
+        .application_name(b"v39 App")
         .application_version(vk::make_version(1, 0, 0))
         .engine_name(b"v39")
         .engine_version(vk::make_version(1, 0, 0))
