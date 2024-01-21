@@ -63,7 +63,7 @@ impl Renderer
         allocator::init_allocator();
         let mut props = VulkanProps::default();
 
-        device::Device::init(&instance, window, &mut props);
+        device::Device::init(&instance, window, &mut props)?;
 
         let renderer = Renderer {
             props,
