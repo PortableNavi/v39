@@ -151,6 +151,7 @@ impl Device
 
         props.device = Some(Self {physical, properties, stats, logical, graphics, compute, transfer, present});
         props.surface = Some(surface);
+        info!("Vulkan Device Created");
         Ok(())
     }
 

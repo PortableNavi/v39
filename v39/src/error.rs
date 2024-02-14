@@ -12,4 +12,7 @@ pub enum V39Error
 
     #[error("{0}")]
     VulkanError(#[from] vulkanalia::vk::ErrorCode),
+
+    #[error("{0}")]
+    Renderer(String),
 }

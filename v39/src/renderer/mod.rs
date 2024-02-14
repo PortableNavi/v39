@@ -6,6 +6,8 @@ use once_cell::sync::OnceCell;
 
 mod device;
 mod render_prelude;
+mod swapchain;
+
 pub(crate) mod allocator;
 
 use render_prelude::*;
@@ -24,6 +26,7 @@ pub(crate) struct Renderer
 {
     props: VulkanProps,
     entry: Entry,
+    sync: VulkanSync,
     instance: Instance,
 }
 
@@ -64,11 +67,15 @@ impl Renderer
         let mut props = VulkanProps::default();
 
         device::Device::init(&instance, window, &mut props)?;
+        swapchain::Swapchain::init(&mut props, window)?;
+
+        let sync = VulkanSync::new(&props)?;
 
         let renderer = Renderer {
             props,
             entry,
-            instance
+            instance,
+            sync,
         };
         
         if INSTANCE.set(renderer).is_err()
@@ -82,6 +89,7 @@ impl Renderer
 
     pub(crate) fn destroy(&mut self)
     {
+        self.sync.deytroy(&mut self.props);
         self.props.destroy(&self.instance);
     }
 }
@@ -92,13 +100,18 @@ pub(crate) struct VulkanProps
 {
     device: Option<device::Device>,
     surface: Option<vk::SurfaceKHR>,
+    swapchain: Option<swapchain::Swapchain>,
 }
 
 impl VulkanProps
 {
     fn destroy(&mut self, instance: &Instance)
     {
-        if let Some(ref mut device) = self.device {device.destroy()}
+        if let Some(ref mut device) = self.device 
+        {
+            if let Some(ref mut swapchain) = self.swapchain {swapchain.destroy(device)};
+            device.destroy();
+        }
         
         if let Some(surface) = self.surface
         {
@@ -118,12 +131,13 @@ pub(crate) struct VulkanSync
 
 impl VulkanSync
 {
-    /*
-    pub(crate) fn new(device: &Device) -> V39Result<Self>
+    pub(crate) fn new(vprops: &VulkanProps) -> V39Result<Self>
     {
         let semaphore_info = vk::SemaphoreCreateInfo::builder();
         let mut image_available = [vk::Semaphore::null(); MAX_FRAMES_IN_FLIGHT];
         let mut render_finished = [vk::Semaphore::null(); MAX_FRAMES_IN_FLIGHT];
+
+        let device = vprops.device.as_ref().unwrap();
 
         for i in 0..MAX_FRAMES_IN_FLIGHT
         {
@@ -140,8 +154,10 @@ impl VulkanSync
         })
     }
 
-    pub(crate) fn deytroy(&mut self, device: &Device)
+    pub(crate) fn deytroy(&mut self, vprops: &VulkanProps)
     {
+        let device = &vprops.device.as_ref().unwrap();
+
         unsafe 
         {
             for (s1, s2) in self.render_finished.iter().zip(self.image_available.iter())
@@ -151,7 +167,6 @@ impl VulkanSync
             }
         }
     }
-    */
 }
 
 
