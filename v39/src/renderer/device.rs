@@ -2,14 +2,20 @@ use crate::renderer::render_prelude::*;
 use crate::renderer::VulkanProps;
 use crate::renderer::DEVICE_EXTENSIONS;
 use vulkanalia::window as vk_window;
+use vulkanalia::vk::KhrSurfaceExtension;
 use winit::window::Window;
 
 
 pub struct Device
 {
     pub physical: vk::PhysicalDevice,
+    pub logical: vulkanalia::Device,
     pub properties: DeviceProperties,
     pub stats: DeviceStats,
+    pub graphics: Option<vk::Queue>,
+    pub compute: Option<vk::Queue>,
+    pub transfer: Option<vk::Queue>,
+    pub present: Option<vk::Queue>,
 }
 
 
@@ -25,7 +31,7 @@ impl Device
 
         for device in unsafe {instance.enumerate_physical_devices()}?
         {
-            match Self::check_device(instance, device, &requirements)
+            match Self::check_device(instance, device, &requirements, surface)
             {
                 Ok(props) => dev_info = Some((device, props)),
                 Err(e) => error_msg = e.to_string(), 
@@ -38,7 +44,112 @@ impl Device
         let stats = properties.stats.take().unwrap();
         info!("Found suitable graphics device: {}", stats.props.device_name);
 
-        props.device = Some(Self {physical, properties, stats});
+        let priorities = &[1.0];
+        let mut queues = vec![];
+        let mut added_indeces: Vec<u32> = vec![];
+        
+        if let Some(index) = stats.graphics_family_index
+        {
+            if !added_indeces.contains(&index) {
+                queues.push(vk::DeviceQueueCreateInfo::builder()
+                    .queue_priorities(priorities)
+                    .queue_family_index(index)
+                );
+
+                added_indeces.push(index);
+            }
+        }
+
+        if let Some(index) = stats.compute_family_index
+        {
+           if !added_indeces.contains(&index) {
+                queues.push(vk::DeviceQueueCreateInfo::builder()
+                    .queue_priorities(priorities)
+                    .queue_family_index(index)
+                );
+
+                added_indeces.push(index);
+            }
+        }
+
+        if let Some(index) = stats.transfer_family_index
+        {
+            if !added_indeces.contains(&index) {
+                queues.push(vk::DeviceQueueCreateInfo::builder()
+                    .queue_priorities(priorities)
+                    .queue_family_index(index)
+                );
+
+                added_indeces.push(index);
+            }
+        }
+
+        if let Some(index) = stats.present_family_index
+        {
+            if !added_indeces.contains(&index)
+            {
+                queues.push(vk::DeviceQueueCreateInfo::builder()
+                    .queue_priorities(priorities)
+                    .queue_family_index(index)
+                )
+            }
+        }
+
+        let layers = {
+            if crate::renderer::VALIDATION_ENABLED 
+            {
+                vec![crate::renderer::VALIDATION_LAYER.as_ptr()]
+            }
+            
+            else
+            {
+                vec![]
+            }
+        };
+
+        let features = vk::PhysicalDeviceFeatures::builder();
+
+        let create_info = vk::DeviceCreateInfo::builder()
+            .queue_create_infos(&queues)
+            .enabled_layer_names(&layers)
+            .enabled_extension_names(&[])
+            .enabled_features(&features);
+
+        let logical = unsafe {instance.create_device(physical, &create_info, alloc())}?;
+
+        let graphics = {
+            match stats.graphics_family_index
+            {
+                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
+                None => None,
+            }
+        };
+
+        let compute = {
+            match stats.compute_family_index
+            {
+                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
+                None => None,
+            }
+        };
+
+        let transfer = {
+            match stats.transfer_family_index
+            {
+                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
+                None => None,
+            }
+        };
+
+        let present = {
+            match stats.present_family_index
+            {
+                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
+                None => None,
+            }
+        };
+
+        props.device = Some(Self {physical, properties, stats, logical, graphics, compute, transfer, present});
         props.surface = Some(surface);
         Ok(())
     }
@@ -48,9 +159,9 @@ impl Device
         
     }
 
-    fn check_device(instance: &Instance, device: vk::PhysicalDevice, requirements: &DeviceProperties) -> V39Result<DeviceProperties>
+    fn check_device(instance: &Instance, device: vk::PhysicalDevice, requirements: &DeviceProperties, surface: vk::SurfaceKHR) -> V39Result<DeviceProperties>
     {
-        let props = DeviceProperties::from_device(instance, device);
+        let props = DeviceProperties::from_device(instance, device, surface);
         let _ = props.meets_requirements(requirements)?;
         Ok(props)
     }
@@ -62,8 +173,8 @@ pub struct DeviceProperties
 {
     graphics: bool,
     transfer: bool,
-    present: bool,
     compute: bool,
+    present: bool,
     discrete_gpu: bool,
     sampler_anisontropy: bool,
     extensions: Vec<String>,
@@ -78,15 +189,15 @@ pub struct DeviceStats
     features: vk::PhysicalDeviceFeatures,
     memory: vk::PhysicalDeviceMemoryProperties,
     graphics_family_index: Option<u32>,
-    present_family_index: Option<u32>,
     transfer_family_index: Option<u32>,
     compute_family_index: Option<u32>,
+    present_family_index: Option<u32>,
 }
 
 
 impl DeviceProperties
 {
-    fn from_device(instance: &Instance, device: vk::PhysicalDevice) -> Self
+    fn from_device(instance: &Instance, device: vk::PhysicalDevice, surface: vk::SurfaceKHR) -> Self
     {
         let props = unsafe {instance.get_physical_device_properties(device)};
         let features = unsafe {instance.get_physical_device_features(device)};
@@ -108,10 +219,21 @@ impl DeviceProperties
             .position(|p| p.queue_flags.contains(vk::QueueFlags::COMPUTE))
             .map(|i| i as u32);
 
+        let mut present_family_index = None;
+
+        for (idx, prop) in queue_family_props.iter() .enumerate()
+        {
+            if let Ok(true) = unsafe {instance.get_physical_device_surface_support_khr(device, idx as u32, surface)}
+            {
+                present_family_index = Some(idx as u32);
+                break;
+            }
+        }
+
         let graphics = graphics_family_index.is_some();
         let transfer = transfer_family_index.is_some();
         let compute = compute_family_index.is_some();
-        let present = false;
+        let present = present_family_index.is_some();
 
         let discrete_gpu = props.device_type == vk::PhysicalDeviceType::DISCRETE_GPU;
         let sampler_anisontropy = features.sampler_anisotropy > 0;
@@ -127,13 +249,13 @@ impl DeviceProperties
         };
 
         let stats = Some(DeviceStats{
-            present_family_index: None,
             graphics_family_index,
             transfer_family_index,
             compute_family_index,
+            present_family_index,
             props,
             features,
-            memory
+            memory,
         });
 
         Self{graphics, transfer, compute, present, stats, discrete_gpu, sampler_anisontropy, extensions}
@@ -142,9 +264,9 @@ impl DeviceProperties
     fn meets_requirements(&self, req: &Self) -> V39Result<()>
     {
         assert(|| self.graphics || !req.graphics, "Graphics Queue")?;
-        assert(|| self.present || !req.present, "Present Queue")?;
         assert(|| self.compute || !req.compute, "Compute Queue")?;
         assert(|| self.transfer || !req.transfer, "Transfer Queue")?;
+        assert(|| self.present || !req.present, "Presentation Queue")?;
         assert(|| self.sampler_anisontropy || !req.sampler_anisontropy, "Aampler Anisontropy")?;
         assert(|| self.discrete_gpu || !req.discrete_gpu, "Discrete GPU")?;
         
