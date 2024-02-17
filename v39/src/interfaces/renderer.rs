@@ -15,6 +15,11 @@ impl RendererInterface
     {
         Ok(Self {handle: Renderer::init(window)?})
     }
+
+    pub(crate) fn destroy(&self)
+    {
+        self.handle.destroy();
+    }
 }
 
 

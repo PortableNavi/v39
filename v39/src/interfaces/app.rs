@@ -162,6 +162,8 @@ impl App
             event_handler.fire_single_engine_event(EngineEvent::Quit(Some(0)));
         });
 
+        self.destroy();
+
         Ok(())
     }
 
@@ -188,5 +190,11 @@ impl App
 
             self.timer.pad_frame_time();
         }
+    }
+
+    fn destroy(&self)
+    {
+        self.renderer.destroy();
+        info!("App Destroyed");
     }
 }

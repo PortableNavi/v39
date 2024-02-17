@@ -109,10 +109,14 @@ impl Device
 
         let features = vk::PhysicalDeviceFeatures::builder();
 
+        let extensions = DEVICE_EXTENSIONS.iter()
+            .map(|e| e.as_ptr())
+            .collect::<Vec<_>>();
+
         let create_info = vk::DeviceCreateInfo::builder()
             .queue_create_infos(&queues)
             .enabled_layer_names(&layers)
-            .enabled_extension_names(&[])
+            .enabled_extension_names(&extensions)
             .enabled_features(&features);
 
         let logical = unsafe {instance.create_device(physical, &create_info, alloc())}?;
@@ -157,7 +161,8 @@ impl Device
 
     pub fn destroy(&mut self)
     {
-        
+        unsafe {self.logical.destroy_device(alloc())};
+        info!("Vulkan Device Destroyed");
     }
 
     fn check_device(instance: &Instance, device: vk::PhysicalDevice, requirements: &DeviceProperties, surface: vk::SurfaceKHR) -> V39Result<DeviceProperties>
@@ -172,27 +177,30 @@ impl Device
 #[derive(Clone, Debug)]
 pub struct DeviceProperties
 {
-    graphics: bool,
-    transfer: bool,
-    compute: bool,
-    present: bool,
-    discrete_gpu: bool,
-    sampler_anisontropy: bool,
-    extensions: Vec<String>,
-    stats: Option<DeviceStats>,
+    pub graphics: bool,
+    pub transfer: bool,
+    pub compute: bool,
+    pub present: bool,
+    pub discrete_gpu: bool,
+    pub sampler_anisontropy: bool,
+    pub extensions: Vec<String>,
+    pub stats: Option<DeviceStats>,
 }
 
 
 #[derive(Clone, Debug)]
 pub struct DeviceStats
 {
-    props: vk::PhysicalDeviceProperties,
-    features: vk::PhysicalDeviceFeatures,
-    memory: vk::PhysicalDeviceMemoryProperties,
-    graphics_family_index: Option<u32>,
-    transfer_family_index: Option<u32>,
-    compute_family_index: Option<u32>,
-    present_family_index: Option<u32>,
+    pub props: vk::PhysicalDeviceProperties,
+    pub features: vk::PhysicalDeviceFeatures,
+    pub memory: vk::PhysicalDeviceMemoryProperties,
+    pub formats: Vec<vk::SurfaceFormatKHR>,
+    pub present_modes: Vec<vk::PresentModeKHR>,
+    pub capabilities: vk::SurfaceCapabilitiesKHR,
+    pub graphics_family_index: Option<u32>,
+    pub transfer_family_index: Option<u32>,
+    pub compute_family_index: Option<u32>,
+    pub present_family_index: Option<u32>,
 }
 
 
@@ -203,6 +211,9 @@ impl DeviceProperties
         let props = unsafe {instance.get_physical_device_properties(device)};
         let features = unsafe {instance.get_physical_device_features(device)};
         let memory = unsafe {instance.get_physical_device_memory_properties(device)};
+        let capabilities = unsafe {instance.get_physical_device_surface_capabilities_khr(device, surface)}.expect("Unable to obtain Vulkan Surface Capabilities");
+        let formats = unsafe {instance.get_physical_device_surface_formats_khr(device, surface)}.expect("Unable to obtain Vulkan Surface Formats");
+        let present_modes = unsafe {instance.get_physical_device_surface_present_modes_khr(device, surface)}.expect("Unable to obtain Vulkan Surface Present Modes");
      
         info!("Querying device properties of {}", props.device_name);
 
@@ -254,6 +265,9 @@ impl DeviceProperties
             transfer_family_index,
             compute_family_index,
             present_family_index,
+            capabilities,
+            present_modes,
+            formats,
             props,
             features,
             memory,

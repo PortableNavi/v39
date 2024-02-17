@@ -3,6 +3,7 @@ use vulkanalia::{vk::ExtDebugUtilsExtension, vk::KhrSwapchainExtension, vk::KhrS
 use winit::window::Window;
 use std::collections::HashSet;
 use once_cell::sync::OnceCell;
+use std::sync::Mutex;
 
 mod device;
 mod render_prelude;
@@ -16,7 +17,7 @@ use render_prelude::*;
 pub(crate) const VALIDATION_ENABLED: bool = cfg!(debug_assertions);
 pub(crate) const VALIDATION_LAYER: vk::ExtensionName = vk::ExtensionName::from_bytes(b"VK_LAYER_KHRONOS_validation");
 pub(crate) const DEVICE_EXTENSIONS: &[vk::ExtensionName] = &[vk::KHR_SWAPCHAIN_EXTENSION.name];
-pub(crate) const MAX_FRAMES_IN_FLIGHT: usize = 3;
+pub(crate) const MAX_FRAMES_IN_FLIGHT: usize = 2;
 
 
 static INSTANCE: OnceCell<Renderer> = OnceCell::new();
@@ -24,10 +25,10 @@ static INSTANCE: OnceCell<Renderer> = OnceCell::new();
 
 pub(crate) struct Renderer
 {
-    props: VulkanProps,
-    entry: Entry,
-    sync: VulkanSync,
+    props: Mutex<VulkanProps>,
+    sync: Mutex<VulkanSync>,
     instance: Instance,
+    entry: Entry,
 }
 
 
@@ -69,7 +70,8 @@ impl Renderer
         device::Device::init(&instance, window, &mut props)?;
         swapchain::Swapchain::init(&mut props, window)?;
 
-        let sync = VulkanSync::new(&props)?;
+        let sync = Mutex::new(VulkanSync::new(&props)?);
+        let props = Mutex::new(props);
 
         let renderer = Renderer {
             props,
@@ -87,10 +89,19 @@ impl Renderer
         Ok(INSTANCE.get().unwrap())
     }
 
-    pub(crate) fn destroy(&mut self)
-    {
-        self.sync.deytroy(&mut self.props);
-        self.props.destroy(&self.instance);
+    pub(crate) fn destroy(&self)
+    { 
+        if let Ok(ref mut props) = self.props.lock()
+        {
+            if let Ok(ref mut sync) = self.sync.lock()
+            {
+                sync.destroy(props);
+            }
+
+            props.destroy(&self.instance);
+        }
+
+        info!("Vulkan Renderer Destroyed");
     }
 }
 
@@ -98,9 +109,9 @@ impl Renderer
 #[derive(Default)]
 pub(crate) struct VulkanProps
 {
-    device: Option<device::Device>,
-    surface: Option<vk::SurfaceKHR>,
-    swapchain: Option<swapchain::Swapchain>,
+    pub device: Option<device::Device>,
+    pub surface: Option<vk::SurfaceKHR>,
+    pub swapchain: Option<swapchain::Swapchain>,
 }
 
 impl VulkanProps
@@ -124,8 +135,8 @@ impl VulkanProps
 #[derive(Clone, Debug)]
 pub(crate) struct VulkanSync
 {
-    image_available: [vk::Semaphore; MAX_FRAMES_IN_FLIGHT],
-    render_finished: [vk::Semaphore; MAX_FRAMES_IN_FLIGHT],
+    pub image_available: [vk::Semaphore; MAX_FRAMES_IN_FLIGHT],
+    pub render_finished: [vk::Semaphore; MAX_FRAMES_IN_FLIGHT],
 }
 
 
@@ -154,7 +165,7 @@ impl VulkanSync
         })
     }
 
-    pub(crate) fn deytroy(&mut self, vprops: &VulkanProps)
+    pub(crate) fn destroy(&self, vprops: &VulkanProps)
     {
         let device = &vprops.device.as_ref().unwrap();
 
