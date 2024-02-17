@@ -122,35 +122,19 @@ impl Device
         let logical = unsafe {instance.create_device(physical, &create_info, alloc())}?;
 
         let graphics = {
-            match stats.graphics_family_index
-            {
-                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
-                None => None,
-            }
+            stats.graphics_family_index.map(|index| unsafe {logical.get_device_queue(index, 0)})
         };
 
         let compute = {
-            match stats.compute_family_index
-            {
-                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
-                None => None,
-            }
+            stats.compute_family_index.map(|index| unsafe {logical.get_device_queue(index, 0)})
         };
 
         let transfer = {
-            match stats.transfer_family_index
-            {
-                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
-                None => None,
-            }
+            stats.transfer_family_index.map(|index| unsafe {logical.get_device_queue(index, 0)})
         };
 
         let present = {
-            match stats.present_family_index
-            {
-                Some(index) => Some(unsafe {logical.get_device_queue(index, 0)}),
-                None => None,
-            }
+            stats.present_family_index.map(|index| unsafe {logical.get_device_queue(index, 0)})
         };
 
         props.device = Some(Self {physical, properties, stats, logical, graphics, compute, transfer, present});
@@ -168,7 +152,7 @@ impl Device
     fn check_device(instance: &Instance, device: vk::PhysicalDevice, requirements: &DeviceProperties, surface: vk::SurfaceKHR) -> V39Result<DeviceProperties>
     {
         let props = DeviceProperties::from_device(instance, device, surface);
-        let _ = props.meets_requirements(requirements)?;
+        props.meets_requirements(requirements)?;
         Ok(props)
     }
 }
