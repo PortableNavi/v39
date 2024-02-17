@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::renderer::Renderer;
+use std::sync::Arc;
 
 
 #[derive(Clone)]
@@ -11,7 +12,7 @@ pub struct RendererInterface
 
 impl RendererInterface
 {
-    pub(crate) fn new(window: &winit::window::Window) -> V39Result<Self>
+    pub(crate) fn new(window: Arc<winit::window::Window>) -> V39Result<Self>
     {
         Ok(Self {handle: Renderer::init(window)?})
     }

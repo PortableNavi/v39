@@ -1,7 +1,7 @@
 use once_cell::sync::OnceCell;
 
-use std::sync::Mutex;
-use std::sync::atomic::{Ordering, AtomicPtr};
+use std::sync::{Mutex, Arc};
+//use std::sync::atomic::{Ordering, AtomicPtr};
 
 use crate::interfaces::event_handler::EventHandlerInterface;
 use crate::interfaces::input_manager::InputManagerInterface;
@@ -30,7 +30,7 @@ pub struct App
     timer: TimerInterface,
     renderer: RendererInterface,
 
-    window: Window,
+    window: Arc<Window>,
     event_loop: Mutex<Option<EventLoop<()>>>,
 
     quit: Mutex<bool>,
@@ -61,7 +61,8 @@ impl App
         event_loop.set_control_flow(ControlFlow::Wait);
         let event_loop = Mutex::new(Some(event_loop));
 
-        let renderer = RendererInterface::new(&window)?;
+        let window = Arc::new(window);
+        let renderer = RendererInterface::new(window.clone())?;
 
         event_handler.add_receiver(input_manager.clone());
         event_handler.add_receiver(timer.clone());

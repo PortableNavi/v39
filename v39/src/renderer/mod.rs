@@ -4,6 +4,7 @@ use winit::window::Window;
 use std::collections::HashSet;
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
+use std::sync::Arc;
 
 mod device;
 mod render_prelude;
@@ -29,12 +30,13 @@ pub(crate) struct Renderer
     sync: Mutex<VulkanSync>,
     instance: Instance,
     entry: Entry,
+    window: Arc<Window>,
 }
 
 
 impl Renderer
 {
-    pub(crate) fn init(window: &Window) -> V39Result<&'static Self>
+    pub(crate) fn init(window: Arc<Window>) -> V39Result<&'static Self>
     {
         let loader = unsafe {LibloadingLoader::new(LIBRARY)}.expect("Vulkan Loader Failed");
         let entry = unsafe {Entry::new(loader)}.expect("Vulkan Entry Failed");
@@ -52,7 +54,7 @@ impl Renderer
             _ => None,
         };
         
-        let instance = create_instance(window, &entry, &mut debug_info)?;
+        let instance = create_instance(&window, &entry, &mut debug_info)?;
 
         let messenger = match VALIDATION_ENABLED
         {
@@ -67,8 +69,8 @@ impl Renderer
         allocator::init_allocator();
         let mut props = VulkanProps::default();
 
-        device::Device::init(&instance, window, &mut props)?;
-        swapchain::Swapchain::init(&mut props, window)?;
+        device::Device::init(&instance, &window, &mut props)?;
+        swapchain::Swapchain::init(&mut props, &window)?;
 
         let sync = Mutex::new(VulkanSync::new(&props)?);
         let props = Mutex::new(props);
@@ -78,6 +80,7 @@ impl Renderer
             entry,
             instance,
             sync,
+            window,
         };
         
         if INSTANCE.set(renderer).is_err()
