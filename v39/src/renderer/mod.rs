@@ -10,6 +10,7 @@ mod device;
 mod render_prelude;
 mod swapchain;
 
+pub(crate) mod image;
 pub(crate) mod allocator;
 
 use render_prelude::*;
@@ -121,9 +122,13 @@ impl VulkanProps
 {
     fn destroy(&mut self, instance: &Instance)
     {
+        if let Some(mut swapchain) = self.swapchain.take()
+        {
+            swapchain.destroy(self)
+        };
+
         if let Some(ref mut device) = self.device 
         {
-            if let Some(ref mut swapchain) = self.swapchain {swapchain.destroy(device)};
             device.destroy();
         }
         
@@ -131,6 +136,20 @@ impl VulkanProps
         {
             unsafe {instance.destroy_surface_khr(surface, alloc())}
         }
+    }
+
+    fn logical(&self) -> V39Result<&vulkanalia::Device>
+    {
+        match self.device.as_ref()
+        {
+            Some(dev) => Ok(&dev.logical),
+            None => Err(V39Error::Renderer("Logical device was used while uninitialized".into()))
+        }
+    }
+
+    fn device(&self) -> Option<&device::Device>
+    {
+        self.device.as_ref()
     }
 }
 

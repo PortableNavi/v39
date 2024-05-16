@@ -181,6 +181,7 @@ pub struct DeviceStats
     pub formats: Vec<vk::SurfaceFormatKHR>,
     pub present_modes: Vec<vk::PresentModeKHR>,
     pub capabilities: vk::SurfaceCapabilitiesKHR,
+    pub depth_format: vk::Format,
     pub graphics_family_index: Option<u32>,
     pub transfer_family_index: Option<u32>,
     pub compute_family_index: Option<u32>,
@@ -244,11 +245,34 @@ impl DeviceProperties
                 .collect()
         };
 
+        let depth_format_preferences = vec![
+            vk::Format::D32_SFLOAT,
+            vk::Format::D32_SFLOAT_S8_UINT,
+            vk::Format::D24_UNORM_S8_UINT,
+        ];
+
+        let depth_format = {
+            let mut result = None;
+
+            for format in depth_format_preferences
+            {
+                let props = unsafe {instance.get_physical_device_format_properties(device, format)};
+                if props.optimal_tiling_features.contains(vk::FormatFeatureFlags::DEPTH_STENCIL_ATTACHMENT)
+                {
+                    result = Some(format);
+                    break;
+                }
+            }
+
+            result.expect("Unknown Depth Format")
+        };
+
         let stats = Some(DeviceStats{
             graphics_family_index,
             transfer_family_index,
             compute_family_index,
             present_family_index,
+            depth_format,
             capabilities,
             present_modes,
             formats,
@@ -314,3 +338,4 @@ fn assert<F: FnOnce()->bool>(f: F, msg: &str) -> V39Result<()>
     if !f() {Err(V39Error::NoSuitableDevie(format!("GPU does not meet requirements: {msg}")))}
     else {Ok(())}
 }
+

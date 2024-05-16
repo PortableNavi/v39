@@ -1,5 +1,6 @@
 use crate::renderer::render_prelude::*;
 use crate::renderer::MAX_FRAMES_IN_FLIGHT;
+use crate::renderer::image::{Image, ImageData};
 use vk::KhrSwapchainExtension;
 use winit::window::Window;
 
@@ -7,12 +8,13 @@ use winit::window::Window;
 pub struct Swapchain
 {
     surface_format: vk::SurfaceFormatKHR,
-    images: [vk::Image; MAX_FRAMES_IN_FLIGHT],
-    image_views: [vk::ImageView; MAX_FRAMES_IN_FLIGHT],
+    images: Vec<vk::Image>,
+    image_views: Vec<vk::ImageView>,
     swapchain: vk::SwapchainKHR,
     width: u32,
     height: u32,
     current_image: usize,
+    depth_buffer: Image,
 }
 
 
@@ -24,12 +26,10 @@ impl Swapchain
         let height = window.inner_size().height;
 
         let (surface_format, swapchain) = Self::create(vprops, None, width, height)?;
-       
-        //TODO: Aquire These Images and create views for them... (37:36)
-        let images = [vk::Image::null(); MAX_FRAMES_IN_FLIGHT];
-        let image_views = [vk::ImageView::null(); MAX_FRAMES_IN_FLIGHT];
+        let (images, image_views) = Self::get_images(vprops, swapchain, surface_format.format)?;
+        let depth_buffer = Self::get_depth_buffer(vprops, width, height)?;
 
-        vprops.swapchain = Some(Swapchain {swapchain, width, height, surface_format, images, image_views, current_image: 0});
+        vprops.swapchain = Some(Swapchain {swapchain, width, height, surface_format, images, image_views, depth_buffer, current_image: 0});
         info!("Vulkan Swapchain Created");
         Ok(())
     }
@@ -37,7 +37,7 @@ impl Swapchain
     pub fn recreate(&mut self, vprops: &mut VulkanProps, window: &Window) -> V39Result<()>
     {
         let device = vprops.device.as_mut().unwrap();
-        self.destroy(device);
+        //self.destroy(device);
 
         self.width = window.inner_size().width;
         self.height = window.inner_size().height;
@@ -48,7 +48,7 @@ impl Swapchain
 
     pub fn next_image(&mut self, vprops: &mut VulkanProps, timeout_ns: u64, sync: &VulkanSync, fence: vk::Fence, window: &Window) -> V39Result<usize>
     {
-        let device = &vprops.device.as_mut().unwrap().logical;
+        let device = vprops.logical().unwrap();
         let (next_image, suc) =  match unsafe {device.acquire_next_image_khr(self.swapchain, timeout_ns, sync.image_available[self.current_image], fence)}
         {
             Ok(result) => result,
@@ -112,9 +112,18 @@ impl Swapchain
         Ok(())
     }
 
-    pub fn destroy(&mut self, device: &mut crate::renderer::device::Device)
+    pub fn destroy(&mut self, vprops: &mut VulkanProps)
     {
-        unsafe {device.logical.destroy_swapchain_khr(self.swapchain, alloc())};
+        self.depth_buffer.destroy(vprops);
+
+        let device = vprops.logical().unwrap();
+
+        for view in self.image_views.iter()
+        {
+            unsafe {device.destroy_image_view(*view, alloc())};
+        }
+
+        unsafe {device.destroy_swapchain_khr(self.swapchain, alloc())};
         info!("Swapchain Destroyed");
     }
 
@@ -181,12 +190,62 @@ impl Swapchain
             .image_sharing_mode(sharing_mode)
             .queue_family_indices(&queues)
             .pre_transform(device.stats.capabilities.current_transform)
-            .composite_alpha(vk::CompositeAlphaFlagsKHR::INHERIT)
+            .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
             .old_swapchain(old_swapchain.unwrap_or_else(vk::SwapchainKHR::null));
         
         let swapchain = unsafe {device.logical.create_swapchain_khr(&create_info, alloc())}?;
 
         Ok((format, swapchain))
+    }
+
+    fn get_images(vprops: &mut VulkanProps, swapchain: vk::SwapchainKHR, format: vk::Format) 
+        -> V39Result<(Vec<vk::Image>, Vec<vk::ImageView>)>
+    {
+        let device = vprops.device.as_ref().unwrap();
+        
+        let images = unsafe {device.logical.get_swapchain_images_khr(swapchain)}?;
+        let mut views = vec![];
+        
+        for image in &images
+        {
+            let subresource_range = vk::ImageSubresourceRange::builder()
+                .aspect_mask(vk::ImageAspectFlags::COLOR)
+                .base_mip_level(0)
+                .level_count(1)
+                .base_array_layer(0)
+                .layer_count(1);
+
+            let create_info = vk::ImageViewCreateInfo::builder()
+                .image(*image)
+                .view_type(vk::ImageViewType::_2D)
+                .format(format)
+                .subresource_range(subresource_range);
+
+            let view = unsafe {device.logical.create_image_view(&create_info, alloc())}?;
+            views.push(view)
+        }
+
+        Ok((images, views))
+    }
+    
+    fn get_depth_buffer(vprops: &mut VulkanProps, width: u32, height: u32) -> V39Result<Image>
+    {
+        
+        let format = vprops.device.as_ref().unwrap().stats.depth_format;
+
+        let image_data = ImageData::new(
+            width,
+            height,
+            vk::ImageType::_2D,
+            format,
+            vk::ImageTiling::OPTIMAL,
+            vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT,
+            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+            vk::ImageAspectFlags::DEPTH,
+        );
+
+        let image = Image::with_view(vprops, image_data)?;
+        Ok(image)
     }
 }
 
