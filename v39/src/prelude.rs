@@ -1,6 +1,7 @@
 use crate::interfaces::app::App;
 
-
+pub use glow;
+pub use glow::HasContext;
 pub use crate::error::V39Error;
 pub use crate::event::receiver::EventReceiver;
 pub use crate::event::event::{Event, EventData};

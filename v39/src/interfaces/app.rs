@@ -57,7 +57,11 @@ impl App
 
         //TODO: Wrap the winit errors...
         let event_loop = EventLoop::new().unwrap();
-        let window = WindowBuilder::new().build(&event_loop).unwrap();
+
+        let window = WindowBuilder::new()
+            .with_title("V39 App")
+            .build(&event_loop).unwrap();
+
         event_loop.set_control_flow(ControlFlow::Wait);
         let event_loop = Mutex::new(Some(event_loop));
 

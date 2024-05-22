@@ -11,8 +11,17 @@ pub enum V39Error
     NoSuitableDevie(String),
 
     #[error("{0}")]
-    VulkanError(#[from] vulkanalia::vk::ErrorCode),
+    GlError(String),
 
     #[error("{0}")]
     Renderer(String),
+}
+
+
+impl From<raw_gl_context::GlError> for V39Error
+{
+    fn from(value: raw_gl_context::GlError) -> Self 
+    {
+        Self::GlError(format!("{value:?}"))
+    }
 }

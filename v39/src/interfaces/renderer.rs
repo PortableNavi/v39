@@ -17,6 +17,11 @@ impl RendererInterface
         Ok(Self {handle: Renderer::init(window)?})
     }
 
+    pub fn render(&self, f: impl FnOnce(&glow::Context))
+    {
+        self.handle.render(f);
+    }
+
     pub(crate) fn destroy(&self)
     {
         self.handle.destroy();
