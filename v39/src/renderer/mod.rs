@@ -17,7 +17,9 @@ static INSTANCE: OnceCell<Renderer> = OnceCell::new();
 pub(crate) struct Renderer
 {
     window: Arc<Window>,
-    context: Mutex<Context>,
+
+    ctx: Mutex<Context>,
+    rctx: Mutex<GlContext>,
 }
 
 
@@ -27,11 +29,12 @@ impl Renderer
     {
 
         let raw_context = unsafe { GlContext::create(&window.as_ref(), GlConfig::default())}?;
+
         unsafe {raw_context.make_current()};
-
         let context = unsafe {Context::from_loader_function(|s| raw_context.get_proc_address(s))};
+        unsafe {raw_context.make_not_current()};
 
-        let renderer = Renderer {window, context: Mutex::new(context)};
+        let renderer = Renderer {window, ctx: Mutex::new(context), rctx: Mutex::new(raw_context)};
         
         if INSTANCE.set(renderer).is_err()
         {
@@ -44,8 +47,18 @@ impl Renderer
 
     pub fn render(&self, func: impl FnOnce(&Context))
     {
-        let mut ctx = &self.context.lock().unwrap();
-        func(ctx);
+        let ctx = self.ctx.lock().unwrap();
+        let rctx = self.rctx.lock().unwrap();
+
+        unsafe {rctx.make_current()};
+
+        func(&ctx);
+        
+        unsafe
+        {
+            rctx.swap_buffers();
+            rctx.make_not_current();
+        }
     }
 
     pub(crate) fn destroy(&self)

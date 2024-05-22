@@ -37,12 +37,6 @@ pub struct App
 }
 
 
-// This and other rather unelegant methods have been deployed 
-// throughout this file because they are
-// unfourtunately neccessary in order to store the event loop
-// in a struct which contains a raw pointer which is !send...
-// However, since i am not modifing that raw pointer in a multithreaded context,
-// this should be fine... (i hope)
 unsafe impl Sync for App {}
 unsafe impl Send for App {}
 
@@ -118,7 +112,7 @@ impl App
 
     pub fn run(&self) -> V39Result<()>
     {
-        // I deserve to be beaten...
+        // :)
         let event_loop = self.event_loop
             .lock().unwrap()
             .take().unwrap();
@@ -203,3 +197,4 @@ impl App
         info!("App Destroyed");
     }
 }
+

@@ -13,7 +13,7 @@ impl EventReceiver for App
     fn tick(&mut self, _delta: f32) -> V39Result<()> 
     {
         get_v39().renderer().render(|gl|unsafe {
-            gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            gl.clear_color(0.5, 0.5, 1.0, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
         });
 
