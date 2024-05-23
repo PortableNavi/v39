@@ -1,0 +1,3 @@
+[env]
+WAYLAND_DISPLAY = {value="", force=true}
+RUST_LOG = "info"
