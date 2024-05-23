@@ -62,7 +62,7 @@ fn main()
 
     if *SHADERS_DID_COMPILE.lock().unwrap()
     {
-        panic!("Shaders did not coompile");
+        panic!("Shaders did not compile");
     }
 }
 

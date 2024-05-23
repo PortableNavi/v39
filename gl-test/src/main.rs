@@ -81,8 +81,6 @@ impl App
         gl.detach_shader(shader_prog, fragment_shader);
         gl.delete_shader(fragment_shader);
 
-        println!("{:?}", to_bytes(&positions).len());
-
         let vbo = gl.create_buffer()?;
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
         gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, to_bytes(&positions), glow::STATIC_DRAW);
