@@ -49,7 +49,7 @@ impl EventReceiver for App
 
 fn main() -> V39Result<()>
 {
-    let app = v39::init()?;
+    let app = v39::init(&InitProps::default())?;
     
     let my_app = App {
         fps_cap: Some(60),

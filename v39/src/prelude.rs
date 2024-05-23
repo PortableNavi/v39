@@ -6,7 +6,8 @@ pub use crate::error::V39Error;
 pub use crate::event::receiver::EventReceiver;
 pub use crate::event::event::{Event, EventData};
 pub use crate::input;
-
+pub use crate::renderer::{Shader, ShaderSource};
+pub use crate::InitProps;
 
 pub type V39Result<T> = Result<T, V39Error>;
 

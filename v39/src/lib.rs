@@ -22,12 +22,36 @@ use std::env;
 extern crate log;
 
 
-pub fn init() -> V39Result<&'static App>
+#[derive(Debug)]
+pub struct InitProps
+{
+    pub screen_width: u32,
+    pub screen_height: u32,
+    pub title: String,
+    pub hidden_window: bool,
+}
+
+
+impl Default for InitProps
+{
+    fn default() -> Self 
+    {
+        Self {
+            screen_width: 800,
+            screen_height: 600,
+            title: "V39 App".into(),
+            hidden_window: false,
+        }
+    }
+}
+
+
+pub fn init(props: &InitProps) -> V39Result<&'static App>
 {
     init_logger()?;
     info!("Logger initialized");
 
-    App::init()?;
+    App::init(props)?;
     info!("App Interface initialized");
 
     Ok(App::get())

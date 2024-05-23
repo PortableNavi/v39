@@ -43,7 +43,7 @@ unsafe impl Send for App {}
 
 impl App
 {
-    pub(crate) fn init() -> V39Result<()>
+    pub(crate) fn init(props: &InitProps) -> V39Result<()>
     {
         let mut event_handler = EventHandlerInterface::new()?;
         let input_manager = InputManagerInterface::new()?;
@@ -53,8 +53,9 @@ impl App
         let event_loop = EventLoop::new().unwrap();
 
         let window = WindowBuilder::new()
-            .with_title("V39 App")
-            .with_inner_size(winit::dpi::LogicalSize::new(800, 600))
+            .with_title(&props.title)
+            .with_inner_size(winit::dpi::LogicalSize::new(props.screen_width, props.screen_height))
+            .with_visible(!props.hidden_window)
             .build(&event_loop).unwrap();
 
         event_loop.set_control_flow(ControlFlow::Wait);
@@ -139,6 +140,11 @@ impl App
                         }
                     },
 
+                    Event::WindowEvent {event: WindowEvent::RedrawRequested {..}, ..} =>
+                    {
+                        get_v39().renderer().finish_frame();  
+                    },
+
                     Event::WindowEvent {event, ..} => {
                         match event
                         {
@@ -180,6 +186,8 @@ impl App
                 if *quit {break}
             }
 
+            self.renderer.new_frame();
+
             event_handler.fire_engine_event(EngineEvent::KeyDown(None));
             event_handler.fire_engine_event(EngineEvent::KeyUp(None));
             event_handler.fire_single_engine_event(EngineEvent::FrameBegin);
@@ -191,6 +199,7 @@ impl App
             event_handler.fire_events();
             event_handler.fire_single_engine_event(EngineEvent::FrameEnd);
 
+            self.renderer.finish_frame();
             self.timer.pad_frame_time();
         }
     }

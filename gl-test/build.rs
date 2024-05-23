@@ -25,7 +25,7 @@ impl EventReceiver for ShaderCheck
 unsafe fn check_shader(gl: &glow::Context) -> bool
 {
     let mut did_compile = true;
-    let shader_files = std::fs::read_dir(SHADER_LOCATION).expect(&format!("Dir: {SHADER_LOCATION:?} was not readable"));
+    let shader_files = std::fs::read_dir(SHADER_LOCATION).unwrap_or_else(|_| panic!("Dir: {SHADER_LOCATION:?} was not readable"));
 
     for file in shader_files
     {
@@ -56,7 +56,15 @@ unsafe fn check_shader(gl: &glow::Context) -> bool
 
 fn main()
 {
-    let app = v39::init().expect("Init Failed");
+    let props = InitProps {
+        title: "Compiling Shaders...".into(),
+        screen_width: 200,
+        screen_height: 150,
+        ..InitProps::default()
+    };
+
+    let app = v39::init(&props).expect("Init Failed");
+    
     app.event_handler().add_receiver(ShaderCheck);
     app.run().expect("Run Failed");
 
