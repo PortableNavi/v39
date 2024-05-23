@@ -63,25 +63,12 @@ impl App
         gl.viewport(0, 0, 800, 600);
 
         let vertex_shader = gl.create_shader(glow::VERTEX_SHADER)?;
-        gl.shader_source(vertex_shader, include_str!("../shaders/vert.glsl"));
-        gl.compile_shader(vertex_shader);
-
-        if !gl.get_shader_compile_status(vertex_shader) 
-        {
-            error!("{}", gl.get_shader_info_log(vertex_shader));
-            get_v39().quit();
-        }
+        gl.shader_source(vertex_shader, include_str!("../shaders/base.vert"));
+        gl.compile_shader(vertex_shader); 
 
         let fragment_shader = gl.create_shader(glow::FRAGMENT_SHADER)?;
-        gl.shader_source(fragment_shader, include_str!("../shaders/frag.glsl"));
+        gl.shader_source(fragment_shader, include_str!("../shaders/base.frag"));
         gl.compile_shader(fragment_shader);
-
-
-        if !gl.get_shader_compile_status(fragment_shader) 
-        {
-            error!("{}", gl.get_shader_info_log(fragment_shader));
-            get_v39().quit();
-        }
 
         let shader_prog = gl.create_program()?;
         gl.attach_shader(shader_prog, vertex_shader);

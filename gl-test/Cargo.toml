@@ -6,3 +6,7 @@ edition = "2021"
 [dependencies]
 v39 = {path="../v39"}
 log = "0.4.21"
+
+
+[build-dependencies]
+v39 = {path="../v39"}
