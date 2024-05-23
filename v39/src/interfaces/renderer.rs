@@ -17,9 +17,9 @@ impl RendererInterface
         Ok(Self {handle: Renderer::init(window)?})
     }
 
-    pub fn render(&self, f: impl FnOnce(&glow::Context))
+    pub fn exec_gl(&self, f: impl FnOnce(&glow::Context) -> V39Result<()>) -> V39Result<()>
     {
-        self.handle.render(f);
+        self.handle.exec_gl(f)
     }
 
     pub(crate) fn destroy(&self)

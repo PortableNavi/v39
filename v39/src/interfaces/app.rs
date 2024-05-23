@@ -54,6 +54,7 @@ impl App
 
         let window = WindowBuilder::new()
             .with_title("V39 App")
+            .with_inner_size(winit::dpi::LogicalSize::new(800, 600))
             .build(&event_loop).unwrap();
 
         event_loop.set_control_flow(ControlFlow::Wait);
@@ -184,6 +185,9 @@ impl App
             event_handler.fire_single_engine_event(EngineEvent::FrameBegin);
             event_handler.fire_single_engine_event(EngineEvent::Tick(Some(self.timer.delta_time().as_secs_f32())));
             event_handler.fire_engine_event(EngineEvent::WindowClose);
+            event_handler.fire_engine_event(EngineEvent::WindowResize(None));
+            event_handler.fire_engine_event(EngineEvent::WindowFocus);
+            event_handler.fire_engine_event(EngineEvent::WindowUnfocus);
             event_handler.fire_events();
             event_handler.fire_single_engine_event(EngineEvent::FrameEnd);
 

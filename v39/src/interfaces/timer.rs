@@ -32,7 +32,7 @@ impl TimerInterface
 
             if delta < target
             {
-                std::thread::sleep(target-delta);
+                std::thread::sleep(target - delta);
             }
         }
     }

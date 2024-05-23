@@ -17,7 +17,6 @@ static INSTANCE: OnceCell<Renderer> = OnceCell::new();
 pub(crate) struct Renderer
 {
     window: Arc<Window>,
-
     ctx: Mutex<Context>,
     rctx: Mutex<GlContext>,
 }
@@ -45,20 +44,22 @@ impl Renderer
         Ok(INSTANCE.get().unwrap())
     }
 
-    pub fn render(&self, func: impl FnOnce(&Context))
+    pub fn exec_gl(&self, func: impl FnOnce(&Context) -> V39Result<()>) -> V39Result<()>
     {
         let ctx = self.ctx.lock().unwrap();
         let rctx = self.rctx.lock().unwrap();
 
         unsafe {rctx.make_current()};
 
-        func(&ctx);
+        func(&ctx)?;
         
         unsafe
         {
             rctx.swap_buffers();
             rctx.make_not_current();
         }
+
+        Ok(())
     }
 
     pub(crate) fn destroy(&self)

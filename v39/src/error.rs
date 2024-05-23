@@ -15,6 +15,9 @@ pub enum V39Error
 
     #[error("{0}")]
     Renderer(String),
+
+    #[error("{0}")]
+    Error(String),
 }
 
 
@@ -23,5 +26,14 @@ impl From<raw_gl_context::GlError> for V39Error
     fn from(value: raw_gl_context::GlError) -> Self 
     {
         Self::GlError(format!("{value:?}"))
+    }
+}
+
+
+impl From<String> for V39Error
+{
+    fn from(value: String) -> Self
+    {
+        Self::Error(value)
     }
 }
