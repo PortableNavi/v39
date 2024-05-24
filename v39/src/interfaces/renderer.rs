@@ -22,6 +22,46 @@ impl RendererInterface
         self.handle.exec_gl(f)
     }
 
+    pub fn load_vbo(&self, id: usize, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
+    {
+        self.handle.load_vbo(id, vbo)        
+    }
+
+    pub fn unload_vbo(&self, id: usize) -> bool
+    {
+        self.handle.unload_vbo(id)
+    }
+
+    pub fn use_vbo(&self, id: usize) -> bool
+    {
+        self.handle.use_vbo(id)
+    }
+
+    pub fn clear_vbo(&self)
+    {
+        self.handle.clear_vbo();
+    }
+
+    pub fn load_vao(&self, id: usize, vao: Vao) -> bool
+    {
+        self.handle.load_vao(id, vao)
+    }
+
+    pub fn unload_vao(&self, id: usize) -> bool
+    {
+        self.handle.unload_vao(id)
+    }
+
+    pub fn use_vao(&self, id: usize) -> bool
+    {
+        self.handle.use_vao(id)
+    }
+
+    pub fn clear_vao(&self)
+    {
+        self.handle.clear_vao()
+    }
+
     pub fn load_shader(&self, id: &'static str, shader: Shader) -> bool
     {
         self.handle.load_shader(id, shader)        
@@ -39,12 +79,24 @@ impl RendererInterface
 
     pub fn clear_shader(&self)
     {
-        let _ = self.handle.exec_gl(|gl| unsafe {
-            gl.use_program(None);
-            Ok(())
-        });
+        self.handle.clear_shader();
     }
-  
+
+    pub fn is_shader_loaded(&self, id: &'static str) -> bool
+    {
+        self.handle.is_shader_loaded(id)
+    }
+
+    pub fn is_vbo_loaded(&self, id: usize) -> bool
+    {
+        self.handle.is_vbo_loaded(id)
+    }
+
+    pub(crate) fn get_vbo(&self, id: usize) -> Option<Vbo<{glow::FLOAT}, f32>>
+    {
+        self.handle.get_vbo(id)
+    }
+
     pub(crate) fn finish_frame(&self)
     {
         self.handle.buffer_swap();

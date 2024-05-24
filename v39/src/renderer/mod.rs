@@ -8,6 +8,12 @@ use glow::Context;
 use raw_window_handle::HasRawWindowHandle;
 use std::collections::HashMap;
 
+mod vbo;
+pub use vbo::Vbo;
+
+mod vao;
+pub use vao::Vao;
+
 mod shader;
 pub use shader::{Shader, ShaderSource, ShaderKind};
 
@@ -23,6 +29,8 @@ pub(crate) struct Renderer
     ctx: Mutex<Context>,
     rctx: Mutex<GlContext>,
     shaders: Mutex<HashMap<&'static str, Shader>>,
+    vbos: Mutex<HashMap<usize, Vbo<{glow::FLOAT}, f32>>>,
+    vaos: Mutex<HashMap<usize, Vao>>,
 }
 
 
@@ -42,6 +50,8 @@ impl Renderer
             ctx: Mutex::new(context),
             rctx: Mutex::new(raw_context),
             shaders: Mutex::new(HashMap::default()),
+            vbos: Mutex::new(HashMap::default()),
+            vaos: Mutex::new(HashMap::default()),
         };
         
         if INSTANCE.set(renderer).is_err()
@@ -61,6 +71,92 @@ impl Renderer
         let result = func(&ctx);
         unsafe {rctx.make_not_current()};
         result
+    }
+
+    pub fn load_vbo(&self, id: usize, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
+    {
+        let mut vbos = self.vbos.lock().unwrap();
+
+        if vbos.contains_key(&id)
+        {
+            return false;
+        }
+
+        vbos.insert(id, vbo);
+
+        true
+    }
+
+    pub fn unload_vbo(&self, id: usize) -> bool
+    {
+        self.vbos.lock().unwrap().remove(&id).is_some()
+    }
+
+    pub fn use_vbo(&self, id: usize) -> bool
+    {
+        if let Some(vbo) = self.vbos.lock().unwrap().get(&id)
+        {
+            let _ = self.exec_gl(|gl| unsafe {
+                gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo.buffer()));
+                Ok(())
+            });
+            
+            return true;
+        }
+
+        false
+    }
+
+    pub fn load_vao(&self, id: usize, vao: Vao) -> bool
+    {
+        let mut vaos = self.vaos.lock().unwrap();
+
+        if vaos.contains_key(&id)
+        {
+            return false;
+        }
+
+        vaos.insert(id, vao);
+
+        true
+    }
+
+    pub fn unload_vao(&self, id: usize) -> bool
+    {
+        self.vaos.lock().unwrap().remove(&id).is_some()
+    }
+
+    pub fn use_vao(&self, id: usize) -> bool
+    {
+        if let Some(vao) = self.vaos.lock().unwrap().get(&id)
+        {
+            self.use_vbo(vao.vbo());
+
+            let _ = self.exec_gl(|gl| unsafe {
+                gl.bind_vertex_array(Some(vao.buffer()));
+                Ok(())
+            });
+            
+            return true;
+        }
+
+        false
+    }
+
+    pub fn clear_vao(&self)
+    {
+        let _ = self.exec_gl(|gl| unsafe {
+            gl.bind_vertex_array(None); 
+            Ok(())
+        });
+    }
+
+    pub fn clear_vbo(&self)
+    {
+        let _ = self.exec_gl(|gl| unsafe {
+            gl.bind_buffer(glow::ARRAY_BUFFER, None); 
+            Ok(())
+        });
     }
 
     pub fn load_shader(&self, id: &'static str, shader: Shader) -> bool
@@ -97,8 +193,37 @@ impl Renderer
         false
     }
 
+    pub fn clear_shader(&self)
+    {
+        let _ = self.exec_gl(|gl| unsafe {
+            gl.use_program(None); 
+            Ok(())
+        });
+    }
+
+    pub fn is_shader_loaded(&self, id: &'static str) -> bool
+    {
+        self.shaders.lock().unwrap().contains_key(id)
+    }
+
+    pub fn is_vbo_loaded(&self, id: usize) -> bool
+    {
+        self.vbos.lock().unwrap().contains_key(&id)
+    }
+
+    pub(crate) fn get_vbo(&self, id: usize) -> Option<Vbo<{glow::FLOAT}, f32>>
+    {
+        self.vbos.lock().unwrap().get(&id).cloned()
+    }
+
     pub(crate) fn destroy(&self)
-    { 
+    {
+        self.clear_vbo();
+        self.clear_shader();
+
+        self.vbos.lock().unwrap().clear();
+        self.shaders.lock().unwrap().clear();
+
         info!("GL Renderer Destroyed");
     }
 

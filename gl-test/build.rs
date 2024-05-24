@@ -56,6 +56,12 @@ unsafe fn check_shader(gl: &glow::Context) -> bool
 
 fn main()
 {
+    // Skip compile time shader check, if it was not opted into.
+    if Ok("true".into()) != std::env::var("GL_SHADER_CHECK")
+    {
+        return;
+    }
+
     let props = InitProps {
         title: "Compiling Shaders...".into(),
         screen_width: 200,
