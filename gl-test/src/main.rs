@@ -1,9 +1,4 @@
-#![feature(portable_simd)]
 use v39::prelude::*;
-
-
-//#[macro_use]
-//extern crate log;
 
 
 #[derive(Default)]
@@ -43,13 +38,14 @@ impl EventReceiver for App
         renderer.load_vao(0, vao);
 
         renderer.load_shader("base", shader);
+
         Ok(())
 }
 
     // Quit the App on a window close event.
     fn window_close(&mut self) -> V39Result<()> 
     {
-        get_v39().quit();
+        get_v39().quit(); 
         Ok(())
     }
 
