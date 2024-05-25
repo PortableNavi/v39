@@ -25,15 +25,21 @@ impl EventReceiver for App
         ])?;
 
         let positions = [
-            0.0f32,  0.5f32, 0.0f32,
-            -0.5f32,  -0.5f32, 0.0f32,
-            0.5f32,  -0.5f32, 0.0f32,
+            -0.5,  0.5, 0.0,
+            -0.5, -0.5, 0.0,
+             0.5, -0.5, 0.0,
+             0.5,  0.5, 0.0,
         ];
+
+        let indices = [0, 1, 3, 3, 1, 2];
 
         let vbo = Vbo::new(&positions, glow::STATIC_DRAW)?;
         renderer.load_vbo(0, vbo);
 
-        let vao = Vao::new(0)?;
+        let ebo = Ebo::new(&indices, glow::STATIC_DRAW)?;
+        renderer.load_ebo(0, ebo);
+
+        let vao = Vao::new(0, 0)?;
         renderer.load_vao(0, vao);
 
         renderer.load_shader("base", shader);
@@ -60,10 +66,10 @@ impl EventReceiver for App
         let renderer = get_v39().renderer();
 
         renderer.use_shader("base");
-        renderer.use_vao(0);
+        let count = renderer.use_vao(0).unwrap_or(0);
 
         renderer.exec_gl(|gl| unsafe {
-            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            gl.draw_elements(glow::TRIANGLES, count, glow::UNSIGNED_INT, 0);
             Ok(())
         })
     }

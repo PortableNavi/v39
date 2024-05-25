@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use std::marker::PhantomData;
+use crate::renderer::to_bytes;
 
 
 #[derive(Clone)]
@@ -67,13 +68,3 @@ impl<const T: u32, D> Drop for Vbo<T, D>
         });
     }
 }
-
-
-unsafe fn to_bytes<T>(slice: &[T]) -> &[u8]
-{
-    core::slice::from_raw_parts(
-        slice.as_ptr() as *const u8,
-        std::mem::size_of_val(slice),
-    )
-}
-

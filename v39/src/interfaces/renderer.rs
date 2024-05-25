@@ -42,6 +42,26 @@ impl RendererInterface
         self.handle.clear_vbo();
     }
 
+    pub fn load_ebo(&self, id: usize, ebo: Ebo) -> bool
+    {
+        self.handle.load_ebo(id, ebo)
+    }
+
+    pub fn unload_ebo(&self, id: usize) -> bool
+    {
+        self.handle.unload_ebo(id)
+    }
+
+    pub fn use_ebo(&self, id: usize) -> bool
+    {
+        self.handle.use_ebo(id)
+    }
+
+    pub fn clear_ebo(&self)
+    {
+        self.handle.clear_ebo()
+    }
+
     pub fn load_vao(&self, id: usize, vao: Vao) -> bool
     {
         self.handle.load_vao(id, vao)
@@ -52,9 +72,9 @@ impl RendererInterface
         self.handle.unload_vao(id)
     }
 
-    pub fn use_vao(&self, id: usize) -> bool
+    pub fn use_vao(&self, id: usize) -> Option<i32>
     {
-        self.handle.use_vao(id)
+        self.handle.use_vao(id).map(|v| v as i32)
     }
 
     pub fn clear_vao(&self)
@@ -92,9 +112,19 @@ impl RendererInterface
         self.handle.is_vbo_loaded(id)
     }
 
+    pub fn is_ebo_loaded(&self, id: usize) -> bool
+    {
+        self.handle.is_ebo_loaded(id)
+    }
+
     pub(crate) fn get_vbo(&self, id: usize) -> Option<Vbo<{glow::FLOAT}, f32>>
     {
         self.handle.get_vbo(id)
+    }
+
+    pub(crate) fn get_ebo(&self, id: usize) -> Option<Ebo>
+    {
+        self.handle.get_ebo(id)
     }
 
     pub(crate) fn finish_frame(&self)

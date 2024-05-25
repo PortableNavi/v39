@@ -8,6 +8,9 @@ use glow::Context;
 use raw_window_handle::HasRawWindowHandle;
 use std::collections::HashMap;
 
+mod ebo;
+pub use ebo::Ebo;
+
 mod vbo;
 pub use vbo::Vbo;
 
@@ -31,6 +34,7 @@ pub(crate) struct Renderer
     shaders: Mutex<HashMap<&'static str, Shader>>,
     vbos: Mutex<HashMap<usize, Vbo<{glow::FLOAT}, f32>>>,
     vaos: Mutex<HashMap<usize, Vao>>,
+    ebos: Mutex<HashMap<usize, Ebo>>,
 }
 
 
@@ -38,7 +42,6 @@ impl Renderer
 {
     pub(crate) fn init(window: Arc<Window>) -> V39Result<&'static Self>
     {
-
         let raw_context = unsafe { GlContext::create(&window.as_ref(), GlConfig::default())}?;
 
         unsafe {raw_context.make_current()};
@@ -52,6 +55,7 @@ impl Renderer
             shaders: Mutex::new(HashMap::default()),
             vbos: Mutex::new(HashMap::default()),
             vaos: Mutex::new(HashMap::default()),
+            ebos: Mutex::new(HashMap::default()),
         };
         
         if INSTANCE.set(renderer).is_err()
@@ -107,6 +111,40 @@ impl Renderer
         false
     }
 
+    pub fn load_ebo(&self, id: usize, ebo: Ebo) -> bool
+    {
+        let mut ebos = self.ebos.lock().unwrap();
+
+        if ebos.contains_key(&id)
+        {
+            return false;
+        }
+
+        ebos.insert(id, ebo);
+
+        true
+    }
+
+    pub fn unload_ebo(&self, id: usize) -> bool
+    {
+        self.ebos.lock().unwrap().remove(&id).is_some()
+    }
+
+    pub fn use_ebo(&self, id: usize) -> bool
+    {
+        if let Some(ebo) = self.ebos.lock().unwrap().get(&id)
+        {
+            let _ = self.exec_gl(|gl| unsafe {
+                gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo.buffer()));
+                Ok(())
+            });
+            
+            return true;
+        }
+
+        false
+    }
+
     pub fn load_vao(&self, id: usize, vao: Vao) -> bool
     {
         let mut vaos = self.vaos.lock().unwrap();
@@ -126,21 +164,22 @@ impl Renderer
         self.vaos.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_vao(&self, id: usize) -> bool
+    pub fn use_vao(&self, id: usize) -> Option<u32>
     {
         if let Some(vao) = self.vaos.lock().unwrap().get(&id)
         {
             self.use_vbo(vao.vbo());
+            self.use_ebo(vao.ebo());
 
             let _ = self.exec_gl(|gl| unsafe {
                 gl.bind_vertex_array(Some(vao.buffer()));
                 Ok(())
             });
-            
-            return true;
+ 
+            return Some(vao.count());
         }
 
-        false
+        None
     }
 
     pub fn clear_vao(&self)
@@ -155,6 +194,14 @@ impl Renderer
     {
         let _ = self.exec_gl(|gl| unsafe {
             gl.bind_buffer(glow::ARRAY_BUFFER, None); 
+            Ok(())
+        });
+    }
+
+    pub fn clear_ebo(&self)
+    {
+        let _ = self.exec_gl(|gl| unsafe {
+            gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, None); 
             Ok(())
         });
     }
@@ -211,16 +258,30 @@ impl Renderer
         self.vbos.lock().unwrap().contains_key(&id)
     }
 
+    pub fn is_ebo_loaded(&self, id: usize) -> bool
+    {
+        self.ebos.lock().unwrap().contains_key(&id)
+    }
+
     pub(crate) fn get_vbo(&self, id: usize) -> Option<Vbo<{glow::FLOAT}, f32>>
     {
         self.vbos.lock().unwrap().get(&id).cloned()
     }
 
+    pub(crate) fn get_ebo(&self, id: usize) -> Option<Ebo>
+    {
+        self.ebos.lock().unwrap().get(&id).cloned()
+    }
+
     pub(crate) fn destroy(&self)
     {
         self.clear_vbo();
+        self.clear_ebo();
+        self.clear_vao();
         self.clear_shader();
 
+        self.vbos.lock().unwrap().clear();
+        self.ebos.lock().unwrap().clear();
         self.vbos.lock().unwrap().clear();
         self.shaders.lock().unwrap().clear();
 
@@ -244,3 +305,12 @@ impl Renderer
 
 unsafe impl Sync for Renderer {}
 unsafe impl Send for Renderer {}
+
+
+pub(crate) unsafe fn to_bytes<T>(slice: &[T]) -> &[u8]
+{
+    core::slice::from_raw_parts(
+        slice.as_ptr() as *const u8,
+        std::mem::size_of_val(slice),
+    )
+}
