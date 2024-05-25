@@ -19,8 +19,6 @@ impl EventReceiver for App
             ShaderSource::fragment(include_str!("../shaders/default.frag")),
         ])?;
 
-        shader.set_uniform("br", UniformValue::F32(0.5));
-
         let verts = [
             // Positions        //Colors
             -0.5,  0.5, 0.0,    1.0, 0.0, 0.0,
@@ -40,7 +38,7 @@ impl EventReceiver for App
         let vao = Vao::new(0, 0)?;
         renderer.load_vao(0, vao);
 
-        renderer.load_shader("default", shader);
+        renderer.load_shader(0, shader);
 
         Ok(())
 }
@@ -55,15 +53,7 @@ impl EventReceiver for App
     // Quit the App if q is pressed.
     fn key_down(&mut self, key: input::V39Key) -> V39Result<()> 
     {
-        let renderer = get_v39().renderer();
-
-        match key
-        {
-            input::V39Key::Q => get_v39().quit(),
-            input::V39Key::Up => {renderer.set_shader_uniform("default", "br", UniformValue::F32(1.0));},
-            input::V39Key::Down => {renderer.set_shader_uniform("default", "br", UniformValue::F32(0.5));},
-            _ => {},
-        }
+        if key == input::V39Key::Q {get_v39().quit()}
         Ok(())
     }
 
@@ -71,8 +61,7 @@ impl EventReceiver for App
     fn tick(&mut self, _delta: f32) -> V39Result<()> 
     {
         let renderer = get_v39().renderer();
-
-        renderer.use_shader("default");
+        renderer.use_shader(0);
         let count = renderer.use_vao(0).unwrap_or(0);
 
         renderer.exec_gl(|gl| unsafe {

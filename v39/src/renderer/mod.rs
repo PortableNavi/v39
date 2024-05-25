@@ -7,9 +7,13 @@ use raw_gl_context::{GlConfig, GlContext};
 use glow::Context;
 use raw_window_handle::HasRawWindowHandle;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 mod ebo;
 pub use ebo::Ebo;
+
+mod texture;
+pub use texture::Texture;
 
 mod vbo;
 pub use vbo::{Vbo, VboFormat};
@@ -31,10 +35,10 @@ pub(crate) struct Renderer
     window: Arc<Window>,
     ctx: Mutex<Context>,
     rctx: Mutex<GlContext>,
-    shaders: Mutex<HashMap<&'static str, Shader>>,
-    vbos: Mutex<HashMap<usize, Vbo<{glow::FLOAT}, f32>>>,
-    vaos: Mutex<HashMap<usize, Vao>>,
-    ebos: Mutex<HashMap<usize, Ebo>>,
+    shaders: Mutex<HashMap<usize, Rc<Shader>>>,
+    vbos: Mutex<HashMap<usize, Rc<Vbo<{glow::FLOAT}, f32>>>>,
+    vaos: Mutex<HashMap<usize, Rc<Vao>>>,
+    ebos: Mutex<HashMap<usize, Rc<Ebo>>>,
 }
 
 
@@ -86,7 +90,7 @@ impl Renderer
             return false;
         }
 
-        vbos.insert(id, vbo);
+        vbos.insert(id, Rc::new(vbo));
 
         true
     }
@@ -120,7 +124,7 @@ impl Renderer
             return false;
         }
 
-        ebos.insert(id, ebo);
+        ebos.insert(id, Rc::new(ebo));
 
         true
     }
@@ -154,7 +158,7 @@ impl Renderer
             return false;
         }
 
-        vaos.insert(id, vao);
+        vaos.insert(id, Rc::new(vao));
 
         true
     }
@@ -206,28 +210,28 @@ impl Renderer
         });
     }
 
-    pub fn load_shader(&self, id: &'static str, shader: Shader) -> bool
+    pub fn load_shader(&self, id: usize, shader: Shader) -> bool
     {
         let mut shaders = self.shaders.lock().unwrap();
 
-        if shaders.contains_key(id)
+        if shaders.contains_key(&id)
         {
             return false;
         }
 
-        shaders.insert(id, shader);
+        shaders.insert(id, Rc::new(shader));
 
         true
     }
 
-    pub fn unload_shader(&self, id: &'static str) -> bool
+    pub fn unload_shader(&self, id: usize) -> bool
     {
-        self.shaders.lock().unwrap().remove(id).is_some()
+        self.shaders.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_shader(&self, id: &'static str) -> bool
+    pub fn use_shader(&self, id: usize) -> bool
     {
-        if let Some(shader) = self.shaders.lock().unwrap().get(id)
+        if let Some(shader) = self.shaders.lock().unwrap().get(&id)
         {
             let _ = self.exec_gl(|gl| unsafe {
                 gl.use_program(Some(shader.program()));
@@ -240,9 +244,9 @@ impl Renderer
         false
     }
 
-    pub fn set_shader_uniform(&self, id: &'static str, name: &str, val: UniformValue) -> bool
+    pub fn set_shader_uniform(&self, id: usize, name: &str, val: UniformValue) -> bool
     {
-        if let Some(shader) = self.shaders.lock().unwrap().get(id)
+        if let Some(shader) = self.shaders.lock().unwrap().get(&id)
         {
             return shader.set_uniform(name, val);
         }
@@ -258,9 +262,9 @@ impl Renderer
         });
     }
 
-    pub fn is_shader_loaded(&self, id: &'static str) -> bool
+    pub fn is_shader_loaded(&self, id: usize) -> bool
     {
-        self.shaders.lock().unwrap().contains_key(id)
+        self.shaders.lock().unwrap().contains_key(&id)
     }
 
     pub fn is_vbo_loaded(&self, id: usize) -> bool
@@ -273,14 +277,24 @@ impl Renderer
         self.ebos.lock().unwrap().contains_key(&id)
     }
 
-    pub(crate) fn get_vbo(&self, id: usize) -> Option<Vbo<{glow::FLOAT}, f32>>
+    pub fn get_vbo(&self, id: usize) -> Option<Rc<Vbo<{glow::FLOAT}, f32>>>
     {
         self.vbos.lock().unwrap().get(&id).cloned()
     }
 
-    pub(crate) fn get_ebo(&self, id: usize) -> Option<Ebo>
+    pub fn get_ebo(&self, id: usize) -> Option<Rc<Ebo>>
     {
         self.ebos.lock().unwrap().get(&id).cloned()
+    }
+
+    pub fn get_vao(&self, id: usize) -> Option<Rc<Vao>>
+    {
+        self.vaos.lock().unwrap().get(&id).cloned()
+    }
+
+    pub fn get_shader(&self, id: usize) -> Option<Rc<Shader>>
+    {
+        self.shaders.lock().unwrap().get(&id).cloned()
     }
 
     pub(crate) fn destroy(&self)

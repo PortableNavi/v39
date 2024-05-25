@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::renderer::Renderer;
 use std::sync::Arc;
+use std::rc::Rc;
 
 
 #[derive(Clone)]
@@ -82,22 +83,22 @@ impl RendererInterface
         self.handle.clear_vao()
     }
 
-    pub fn load_shader(&self, id: &'static str, shader: Shader) -> bool
+    pub fn load_shader(&self, id: usize, shader: Shader) -> bool
     {
         self.handle.load_shader(id, shader)        
     }
 
-    pub fn unload_shader(&self, id: &'static str) -> bool
+    pub fn unload_shader(&self, id: usize) -> bool
     {
         self.handle.unload_shader(id)
     }
 
-    pub fn use_shader(&self, id: &'static str) -> bool
+    pub fn use_shader(&self, id: usize) -> bool
     {
         self.handle.use_shader(id)
     }
 
-    pub fn set_shader_uniform(&self, id: &'static str, name: &str, val: UniformValue) -> bool
+    pub fn set_shader_uniform(&self, id: usize, name: &str, val: UniformValue) -> bool
     {
         self.handle.set_shader_uniform(id, name, val)
     }
@@ -107,7 +108,7 @@ impl RendererInterface
         self.handle.clear_shader();
     }
 
-    pub fn is_shader_loaded(&self, id: &'static str) -> bool
+    pub fn is_shader_loaded(&self, id: usize) -> bool
     {
         self.handle.is_shader_loaded(id)
     }
@@ -122,14 +123,24 @@ impl RendererInterface
         self.handle.is_ebo_loaded(id)
     }
 
-    pub(crate) fn get_vbo(&self, id: usize) -> Option<Vbo<{glow::FLOAT}, f32>>
+    pub fn get_vbo(&self, id: usize) -> Option<Rc<Vbo<{glow::FLOAT}, f32>>>
     {
         self.handle.get_vbo(id)
     }
 
-    pub(crate) fn get_ebo(&self, id: usize) -> Option<Ebo>
+    pub fn get_ebo(&self, id: usize) -> Option<Rc<Ebo>>
     {
         self.handle.get_ebo(id)
+    }
+
+    pub fn get_vao(&self, id: usize) -> Option<Rc<Vao>>
+    {
+        self.handle.get_vao(id)
+    }
+
+    pub fn get_shader(&self, id: usize) -> Option<Rc<Shader>>
+    {
+        self.handle.get_shader(id)
     }
 
     pub(crate) fn finish_frame(&self)
