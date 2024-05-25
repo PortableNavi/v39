@@ -3,18 +3,26 @@ use std::marker::PhantomData;
 use crate::renderer::to_bytes;
 
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VboFormat
+{
+    Position(i32),
+    PositionColor(i32, i32),
+}
+
+
 #[derive(Clone)]
 pub struct Vbo<const T: u32, D>
 {
     buffer: glow::Buffer,
-    size: i32,
+    format: VboFormat,
     _phantom: PhantomData<D>,
 }
 
 
 impl<const T: u32, D> Vbo<T, D>
 {
-    pub fn new(data: &[D], draw_mode: u32) -> V39Result<Self>
+    pub fn new(data: &[D], draw_mode: u32, format: VboFormat) -> V39Result<Self>
     {
         let mut vbo = None;
 
@@ -29,16 +37,9 @@ impl<const T: u32, D> Vbo<T, D>
 
         match vbo
         {
-            Some(buffer) => Ok(Self {buffer, size: 3, _phantom: PhantomData}),
+            Some(buffer) => Ok(Self {buffer, format, _phantom: PhantomData}),
             None => Err(V39Error::Renderer("Failed to create vbo".into())) //UNREACHABLE
         }
-    }
-
-    pub fn with_size(data: &[D], draw_mode: u32, size: i32) -> V39Result<Self>
-    {
-        let mut me = Self::new(data, draw_mode)?;
-        me.size = size;
-        Ok(me)
     }
 
     pub fn kind(&self) -> u32
@@ -46,9 +47,9 @@ impl<const T: u32, D> Vbo<T, D>
         T
     }
 
-    pub fn size(&self) -> i32
+    pub fn format(&self) -> VboFormat
     {
-        self.size
+        self.format
     }
 
     pub(crate) fn buffer(&self) -> glow::Buffer

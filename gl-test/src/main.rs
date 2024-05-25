@@ -19,16 +19,17 @@ impl EventReceiver for App
             ShaderSource::fragment(include_str!("../shaders/base.frag")),
         ])?;
 
-        let positions = [
-            -0.5,  0.5, 0.0,
-            -0.5, -0.5, 0.0,
-             0.5, -0.5, 0.0,
-             0.5,  0.5, 0.0,
+        let verts = [
+            // Positions        //Colors
+            -0.5,  0.5, 0.0,    1.0, 0.0, 0.0,
+            -0.5, -0.5, 0.0,    1.0, 1.0, 0.0,
+             0.5, -0.5, 0.0,    1.0, 0.0, 1.0,
+             0.5,  0.5, 0.0,    0.0, 1.0, 1.0,
         ];
 
         let indices = [0, 1, 3, 3, 1, 2];
 
-        let vbo = Vbo::new(&positions, glow::STATIC_DRAW)?;
+        let vbo = Vbo::new(&verts, glow::STATIC_DRAW, VboFormat::PositionColor(3, 3))?;
         renderer.load_vbo(0, vbo);
 
         let ebo = Ebo::new(&indices, glow::STATIC_DRAW)?;

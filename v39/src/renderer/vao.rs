@@ -31,9 +31,25 @@ impl Vao
         get_v39().renderer().exec_gl(|gl| unsafe {
             vao = Some(gl.create_vertex_array()?);
             gl.bind_vertex_array(vao);
-            gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo_obj.buffer())); 
-            gl.enable_vertex_attrib_array(0);
-            gl.vertex_attrib_pointer_f32(0, vbo_obj.size(), vbo_obj.kind(), false, 0, 0);
+            gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo_obj.buffer()));
+
+            let format = vbo_obj.format();
+
+            match format
+            {
+                VboFormat::Position(psize) => {
+                    gl.enable_vertex_attrib_array(0);
+                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, 0, 0);
+                },
+
+                VboFormat::PositionColor(psize, csize) => {
+                    gl.enable_vertex_attrib_array(0);
+                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, 8*csize, 0);
+                    gl.enable_vertex_attrib_array(1);
+                    gl.vertex_attrib_pointer_f32(1, csize, vbo_obj.kind(), false, 8*psize, 4*psize);
+                },
+            }
+
             gl.bind_vertex_array(None);
             Ok(())
         })?;

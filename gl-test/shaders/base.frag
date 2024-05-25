@@ -1,8 +1,8 @@
 #version 330 core
-in vec3 pos;
-out vec4 col;
+in vec3 vert_color;
+out vec4 out_color;
 
 void main()
 {
-  col = vec4(pos, 1.0f);
+  out_color = vec4(vert_color, 1.0f);
 }

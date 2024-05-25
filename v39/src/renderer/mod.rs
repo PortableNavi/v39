@@ -12,7 +12,7 @@ mod ebo;
 pub use ebo::Ebo;
 
 mod vbo;
-pub use vbo::Vbo;
+pub use vbo::{Vbo, VboFormat};
 
 mod vao;
 pub use vao::Vao;
