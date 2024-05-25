@@ -10,6 +10,27 @@ pub enum ShaderKind
 }
 
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum UniformValue
+{
+    F32(f32),
+    U32(u32),
+    I32(i32),
+
+    F32Vec2(f32, f32),
+    U32Vec2(u32, u32),
+    I32Vec2(i32, i32),
+
+    F32Vec3(f32, f32, f32),
+    U32Vec3(u32, u32, u32),
+    I32Vec3(i32, i32, i32),
+
+    F32Vec4(f32, f32, f32, f32),
+    U32Vec4(u32, u32, u32, u32),
+    I32Vec4(i32, i32, i32, i32),
+}
+
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ShaderSource<'a>
 {
@@ -92,6 +113,47 @@ impl Shader
     pub(crate) fn program(&self) -> glow::Program
     {
         self.program
+    }
+
+    pub fn set_uniform(&self, name: &str, val: UniformValue) -> bool
+    {
+        let result = get_v39().renderer().exec_gl(|gl| unsafe {
+            gl.use_program(Some(self.program));
+
+            let loc = match gl.get_uniform_location(self.program, name)
+            {
+                Some(loc) => loc,
+                None => return Err(V39Error::Renderer(format!("No such uniform: {name:?}"))),
+            };
+            
+            match val
+            {
+                UniformValue::F32(x) => gl.uniform_1_f32(Some(&loc), x),
+                UniformValue::U32(x) => gl.uniform_1_u32(Some(&loc), x),
+                UniformValue::I32(x) => gl.uniform_1_i32(Some(&loc), x),
+                UniformValue::F32Vec2(x, y) => gl.uniform_2_f32(Some(&loc), x, y),
+                UniformValue::U32Vec2(x, y) => gl.uniform_2_u32(Some(&loc), x, y),
+                UniformValue::I32Vec2(x, y) => gl.uniform_2_i32(Some(&loc), x, y),
+                UniformValue::F32Vec3(x, y, z) => gl.uniform_3_f32(Some(&loc), x, y, z),
+                UniformValue::U32Vec3(x, y, z) => gl.uniform_3_u32(Some(&loc), x, y, z),
+                UniformValue::I32Vec3(x, y, z) => gl.uniform_3_i32(Some(&loc), x, y, z),
+                UniformValue::F32Vec4(x, y, z, d) => gl.uniform_4_f32(Some(&loc), x, y, z, d),
+                UniformValue::U32Vec4(x, y, z, d) => gl.uniform_4_u32(Some(&loc), x, y, z, d),
+                UniformValue::I32Vec4(x, y, z, d) => gl.uniform_4_i32(Some(&loc), x, y, z, d),
+            }
+
+            gl.use_program(None);
+            Ok(())
+        });
+
+        match result
+        {
+            Ok(_) => true,
+            Err(e) => {
+                error!("{e}");
+                false
+            }
+        }
     }
 }
 

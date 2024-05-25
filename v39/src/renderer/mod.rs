@@ -18,7 +18,7 @@ mod vao;
 pub use vao::Vao;
 
 mod shader;
-pub use shader::{Shader, ShaderSource, ShaderKind};
+pub use shader::{Shader, ShaderSource, ShaderKind, UniformValue};
 
 pub(crate) const MAX_FRAMES_IN_FLIGHT: usize = 2;
 
@@ -175,7 +175,7 @@ impl Renderer
                 gl.bind_vertex_array(Some(vao.buffer()));
                 Ok(())
             });
- 
+
             return Some(vao.count());
         }
 
@@ -235,6 +235,16 @@ impl Renderer
             });
             
             return true;
+        }
+
+        false
+    }
+
+    pub fn set_shader_uniform(&self, id: &'static str, name: &str, val: UniformValue) -> bool
+    {
+        if let Some(shader) = self.shaders.lock().unwrap().get(id)
+        {
+            return shader.set_uniform(name, val);
         }
 
         false

@@ -97,6 +97,11 @@ impl RendererInterface
         self.handle.use_shader(id)
     }
 
+    pub fn set_shader_uniform(&self, id: &'static str, name: &str, val: UniformValue) -> bool
+    {
+        self.handle.set_shader_uniform(id, name, val)
+    }
+
     pub fn clear_shader(&self)
     {
         self.handle.clear_shader();
