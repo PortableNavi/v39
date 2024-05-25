@@ -13,7 +13,7 @@ mod ebo;
 pub use ebo::Ebo;
 
 mod texture;
-pub use texture::Texture;
+pub use texture::{Texture, TexParam};
 
 mod vbo;
 pub use vbo::{Vbo, VboFormat};
@@ -39,6 +39,7 @@ pub(crate) struct Renderer
     vbos: Mutex<HashMap<usize, Rc<Vbo<{glow::FLOAT}, f32>>>>,
     vaos: Mutex<HashMap<usize, Rc<Vao>>>,
     ebos: Mutex<HashMap<usize, Rc<Ebo>>>,
+    textures: Mutex<HashMap<usize, Rc<Texture>>>,
 }
 
 
@@ -60,6 +61,7 @@ impl Renderer
             vbos: Mutex::new(HashMap::default()),
             vaos: Mutex::new(HashMap::default()),
             ebos: Mutex::new(HashMap::default()),
+            textures: Mutex::new(HashMap::default()),
         };
         
         if INSTANCE.set(renderer).is_err()
@@ -79,6 +81,72 @@ impl Renderer
         let result = func(&ctx);
         unsafe {rctx.make_not_current()};
         result
+    }
+
+    pub fn load_texture(&self, id: usize, texture: Texture) -> bool
+    {
+        let mut textures = self.textures.lock().unwrap();
+
+        if textures.contains_key(&id)
+        {
+            return false;
+        }
+
+        textures.insert(id, Rc::new(texture));
+
+        true
+    }
+
+    pub fn unload_texture(&self, id: usize) -> bool
+    {
+        self.textures.lock().unwrap().remove(&id).is_some()
+    }
+
+    pub fn use_texture(&self, id: usize, unit: u32, shader: usize, sampler_name: &str) -> bool
+    {
+        if let Some(texture) = self.textures.lock().unwrap().get(&id)
+        {
+            let prog = match self.get_shader(shader)
+            {
+                Some(shader) => shader.program(),
+                None => return false,
+            };
+
+            let _ = self.exec_gl(|gl| unsafe {
+                gl.active_texture(unit);
+                gl.bind_texture(glow::TEXTURE_2D, Some(texture.image()));
+                gl.use_program(Some(prog));
+    
+                if let Some(loc) = gl.get_uniform_location(prog, sampler_name)
+                {
+                    gl.uniform_1_i32(Some(&loc), 0);
+                }
+
+                else
+                {
+                    warn!("No sampler named {sampler_name:?} in shader {shader:?}");
+                }
+
+                Ok(())
+            });
+            
+            return true;
+        }
+
+        false
+    }
+    
+    pub fn clear_texture(&self)
+    {
+        let _ = self.exec_gl(|gl| unsafe {
+            gl.bind_texture(glow::TEXTURE_2D, None);
+            Ok(())
+        });
+    }
+
+    pub fn get_texture(&self, id: usize) -> Option<Rc<Texture>>
+    {
+        self.textures.lock().unwrap().get(&id).cloned()
     }
 
     pub fn load_vbo(&self, id: usize, vbo: Vbo<{glow::FLOAT}, f32>) -> bool

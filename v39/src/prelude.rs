@@ -17,6 +17,7 @@ pub use crate::renderer::{
     Ebo, 
     UniformValue,
     Texture,
+    TexParam,
 };
 
 pub type V39Result<T> = Result<T, V39Error>;

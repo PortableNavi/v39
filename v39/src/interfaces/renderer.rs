@@ -23,6 +23,31 @@ impl RendererInterface
         self.handle.exec_gl(f)
     }
 
+    pub fn load_texture(&self, id: usize, texture: Texture) -> bool
+    {
+        self.handle.load_texture(id, texture)
+    }
+
+    pub fn unload_texture(&self, id: usize) -> bool
+    {
+        self.handle.unload_texture(id)
+    }
+
+    pub fn use_texture(&self, id: usize, unit: u32, shader: usize, sampler_name: &str) -> bool
+    {
+        self.handle.use_texture(id, unit, shader, sampler_name)
+    }
+    
+    pub fn clear_texture(&self)
+    {
+        self.handle.clear_texture()
+    }
+
+    pub fn get_texture(&self, id: usize) -> Option<Rc<Texture>>
+    {
+        self.handle.get_texture(id)
+    }
+
     pub fn load_vbo(&self, id: usize, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
     {
         self.handle.load_vbo(id, vbo)        

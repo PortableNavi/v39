@@ -8,6 +8,8 @@ pub enum VboFormat
 {
     Position(i32),
     PositionColor(i32, i32),
+    PositionCoords(i32, i32),
+    PositionColorCoords(i32, i32, i32)
 }
 
 

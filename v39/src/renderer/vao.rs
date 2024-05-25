@@ -43,10 +43,30 @@ impl Vao
                 },
 
                 VboFormat::PositionColor(psize, csize) => {
+                    let stride = 4*psize + 4*csize;
                     gl.enable_vertex_attrib_array(0);
-                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, 8*csize, 0);
+                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, stride, 0);
                     gl.enable_vertex_attrib_array(1);
-                    gl.vertex_attrib_pointer_f32(1, csize, vbo_obj.kind(), false, 8*psize, 4*psize);
+                    gl.vertex_attrib_pointer_f32(1, csize, vbo_obj.kind(), false, stride, 4*psize);
+                },
+
+                VboFormat::PositionCoords(psize, csize) => {
+                    let stride = 4*psize + 4*csize;
+                    gl.enable_vertex_attrib_array(0);
+                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, stride, 0);
+                    gl.enable_vertex_attrib_array(1);
+                    gl.vertex_attrib_pointer_f32(1, csize, vbo_obj.kind(), false, stride, 4*psize);
+                },
+
+                VboFormat::PositionColorCoords(psize, csize, cosize) => {
+
+                    let stride = 4*psize + 4*csize + 4*cosize;
+                    gl.enable_vertex_attrib_array(0);
+                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, stride, 0);
+                    gl.enable_vertex_attrib_array(1);
+                    gl.vertex_attrib_pointer_f32(1, csize, vbo_obj.kind(), false, stride, 4*psize);
+                    gl.enable_vertex_attrib_array(2);
+                    gl.vertex_attrib_pointer_f32(2, cosize, vbo_obj.kind(), false, stride, 4*psize + 4*csize);
                 },
             }
 

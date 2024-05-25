@@ -15,3 +15,4 @@ thiserror = "1.0.53"
 raw-window-handle = "0.4.3"
 winit = {version="0.29.9", features=["rwh_04"]}
 raw-gl-context = {git="https://github.com/PortableNavi/raw-gl-context.git"}
+image = "0.25.1"

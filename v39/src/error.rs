@@ -17,6 +17,9 @@ pub enum V39Error
     Renderer(String),
 
     #[error("{0}")]
+    Image(#[from] image::error::ImageError),
+
+    #[error("{0}")]
     Error(String),
 }
 

@@ -20,16 +20,16 @@ impl EventReceiver for App
         ])?;
 
         let verts = [
-            // Positions        //Colors
-            -0.5,  0.5, 0.0,    1.0, 0.0, 0.0,
-            -0.5, -0.5, 0.0,    1.0, 1.0, 0.0,
-             0.5, -0.5, 0.0,    1.0, 0.0, 1.0,
-             0.5,  0.5, 0.0,    0.0, 1.0, 1.0,
+            // Positions        //Colors        //Coords
+            -0.5,  0.5, 0.0,    1.0, 0.0, 0.0,  0.0, 1.0,
+            -0.5, -0.5, 0.0,    1.0, 1.0, 0.0,  0.0, 0.0,
+             0.5, -0.5, 0.0,    1.0, 0.0, 1.0,  1.0, 0.0,
+             0.5,  0.5, 0.0,    0.0, 1.0, 1.0,  1.0, 1.0,
         ];
 
         let indices = [0, 1, 3, 3, 1, 2];
 
-        let vbo = Vbo::new(&verts, glow::STATIC_DRAW, VboFormat::PositionColor(3, 3))?;
+        let vbo = Vbo::new(&verts, glow::STATIC_DRAW, VboFormat::PositionColorCoords(3, 3, 2))?;
         renderer.load_vbo(0, vbo);
 
         let ebo = Ebo::new(&indices, glow::STATIC_DRAW)?;
@@ -38,8 +38,18 @@ impl EventReceiver for App
         let vao = Vao::new(0, 0)?;
         renderer.load_vao(0, vao);
 
-        renderer.load_shader(0, shader);
+        let texture = Texture::from_file("gl-test/textures/miku.png")?;
+        texture.set_params(&[
+            (glow::TEXTURE_MIN_FILTER, TexParam::U32(glow::NEAREST)),
+            (glow::TEXTURE_MAG_FILTER, TexParam::U32(glow::NEAREST)),
+            (glow::TEXTURE_WRAP_S, TexParam::U32(glow::CLAMP_TO_BORDER)),
+            (glow::TEXTURE_WRAP_T, TexParam::U32(glow::CLAMP_TO_BORDER)),
+            (glow::TEXTURE_BORDER_COLOR, TexParam::F32Slice(&[1.0, 1.0, 1.0, 1.0])),
+        ]);
 
+        renderer.load_texture(0, texture);
+        
+        renderer.load_shader(0, shader);
         Ok(())
 }
 
@@ -61,8 +71,8 @@ impl EventReceiver for App
     fn tick(&mut self, _delta: f32) -> V39Result<()> 
     {
         let renderer = get_v39().renderer();
-        renderer.use_shader(0);
         let count = renderer.use_vao(0).unwrap_or(0);
+        renderer.use_texture(0, glow::TEXTURE0, 0, "tex");
 
         renderer.exec_gl(|gl| unsafe {
             gl.draw_elements(glow::TRIANGLES, count, glow::UNSIGNED_INT, 0);
