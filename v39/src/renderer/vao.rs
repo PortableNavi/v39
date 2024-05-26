@@ -4,24 +4,24 @@ use crate::prelude::*;
 pub struct Vao
 {
     buffer: glow::VertexArray,
-    vbo: usize,
-    ebo: usize,
+    vbo: ModelId,
+    ebo: ModelId,
     count: u32,
 }
 
 
 impl Vao
 {
-    pub fn new(vbo: usize, ebo: usize) -> V39Result<Self>
+    pub fn new(vbo: ModelId, ebo: ModelId) -> V39Result<Self>
     {
         if !get_v39().renderer().use_vbo(vbo)
         {
-            return Err(V39Error::Renderer(format!("VBO({vbo}) is not loaded")));
+            return Err(V39Error::Renderer(format!("VBO({vbo:?}) is not loaded")));
         }
 
         if !get_v39().renderer().is_ebo_loaded(ebo)
         {
-            return Err(V39Error::Renderer(format!("EBO({ebo}) is not loaded")));
+            return Err(V39Error::Renderer(format!("EBO({ebo:?}) is not loaded")));
         }
 
         let mut vao = None;
@@ -89,12 +89,12 @@ impl Vao
         self.buffer
     }
 
-    pub(crate) fn vbo(&self) -> usize
+    pub(crate) fn vbo(&self) -> ModelId
     {
         self.vbo
     }
 
-    pub(crate) fn ebo(&self) -> usize
+    pub(crate) fn ebo(&self) -> ModelId
     {
         self.ebo
     }

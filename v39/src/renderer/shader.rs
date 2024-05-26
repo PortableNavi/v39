@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::math::*;
 
 
 #[repr(u32)]
@@ -28,6 +29,8 @@ pub enum UniformValue
     F32Vec4(f32, f32, f32, f32),
     U32Vec4(u32, u32, u32, u32),
     I32Vec4(i32, i32, i32, i32),
+    
+    Mat4(Mat4),
 }
 
 
@@ -140,6 +143,7 @@ impl Shader
                 UniformValue::F32Vec4(x, y, z, d) => gl.uniform_4_f32(Some(&loc), x, y, z, d),
                 UniformValue::U32Vec4(x, y, z, d) => gl.uniform_4_u32(Some(&loc), x, y, z, d),
                 UniformValue::I32Vec4(x, y, z, d) => gl.uniform_4_i32(Some(&loc), x, y, z, d),
+                UniformValue::Mat4(mat) => gl.uniform_matrix_4_f32_slice(Some(&loc), false, mat.as_slice()),
             }
 
             gl.use_program(None);

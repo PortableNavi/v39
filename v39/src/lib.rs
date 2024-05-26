@@ -9,6 +9,7 @@ pub mod event;
 pub mod input;
 pub mod timer;
 pub mod renderer;
+pub mod math;
 
 use prelude::*;
 use interfaces::app::App;

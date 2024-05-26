@@ -18,22 +18,44 @@ impl RendererInterface
         Ok(Self {handle: Renderer::init(window)?})
     }
 
+    pub fn load_model(&self, model: Model) -> Option<ModelId>
+    {
+        self.handle.load_model(model)
+    }
+
+    pub fn unload_model(&self, id: ModelId) -> bool
+    {
+        self.handle.unload_model(id)
+    }
+
+    pub fn use_model(&self, id: ModelId) -> Option<i32>
+    {
+        self.handle.use_model(id).map(|id| id as i32)
+    }
+
+    pub fn get_model(&self, id: ModelId) -> Option<Rc<Model>>
+    {
+        self.handle.get_model(id)
+    }
+
     pub fn exec_gl(&self, f: impl FnOnce(&glow::Context) -> V39Result<()>) -> V39Result<()>
     {
         self.handle.exec_gl(f)
     }
 
-    pub fn load_texture(&self, id: usize, texture: Texture) -> bool
+    pub fn load_texture(&self, texture: Texture) -> TextureId
     {
-        self.handle.load_texture(id, texture)
+        let id = TextureId::new();
+        self.handle.load_texture(id, texture);
+        id
     }
 
-    pub fn unload_texture(&self, id: usize) -> bool
+    pub fn unload_texture(&self, id: TextureId) -> bool
     {
         self.handle.unload_texture(id)
     }
 
-    pub fn use_texture(&self, id: usize, unit: u32, shader: usize, sampler_name: &str) -> bool
+    pub fn use_texture(&self, id: TextureId, unit: u32, shader: ShaderId, sampler_name: &str) -> bool
     {
         self.handle.use_texture(id, unit, shader, sampler_name)
     }
@@ -43,22 +65,22 @@ impl RendererInterface
         self.handle.clear_texture()
     }
 
-    pub fn get_texture(&self, id: usize) -> Option<Rc<Texture>>
+    pub fn get_texture(&self, id: TextureId) -> Option<Rc<Texture>>
     {
         self.handle.get_texture(id)
     }
 
-    pub fn load_vbo(&self, id: usize, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
+    pub fn load_vbo(&self, id: ModelId, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
     {
         self.handle.load_vbo(id, vbo)        
     }
 
-    pub fn unload_vbo(&self, id: usize) -> bool
+    pub fn unload_vbo(&self, id: ModelId) -> bool
     {
         self.handle.unload_vbo(id)
     }
 
-    pub fn use_vbo(&self, id: usize) -> bool
+    pub fn use_vbo(&self, id: ModelId) -> bool
     {
         self.handle.use_vbo(id)
     }
@@ -68,17 +90,17 @@ impl RendererInterface
         self.handle.clear_vbo();
     }
 
-    pub fn load_ebo(&self, id: usize, ebo: Ebo) -> bool
+    pub fn load_ebo(&self, id: ModelId, ebo: Ebo) -> bool
     {
         self.handle.load_ebo(id, ebo)
     }
 
-    pub fn unload_ebo(&self, id: usize) -> bool
+    pub fn unload_ebo(&self, id: ModelId) -> bool
     {
         self.handle.unload_ebo(id)
     }
 
-    pub fn use_ebo(&self, id: usize) -> bool
+    pub fn use_ebo(&self, id: ModelId) -> bool
     {
         self.handle.use_ebo(id)
     }
@@ -88,17 +110,17 @@ impl RendererInterface
         self.handle.clear_ebo()
     }
 
-    pub fn load_vao(&self, id: usize, vao: Vao) -> bool
+    pub fn load_vao(&self, id: ModelId, vao: Vao) -> bool
     {
         self.handle.load_vao(id, vao)
     }
 
-    pub fn unload_vao(&self, id: usize) -> bool
+    pub fn unload_vao(&self, id: ModelId) -> bool
     {
         self.handle.unload_vao(id)
     }
 
-    pub fn use_vao(&self, id: usize) -> Option<i32>
+    pub fn use_vao(&self, id: ModelId) -> Option<i32>
     {
         self.handle.use_vao(id).map(|v| v as i32)
     }
@@ -108,22 +130,24 @@ impl RendererInterface
         self.handle.clear_vao()
     }
 
-    pub fn load_shader(&self, id: usize, shader: Shader) -> bool
+    pub fn load_shader(&self, shader: Shader) -> ShaderId
     {
-        self.handle.load_shader(id, shader)        
+        let id = ShaderId::new();
+        self.handle.load_shader(id, shader);
+        id
     }
 
-    pub fn unload_shader(&self, id: usize) -> bool
+    pub fn unload_shader(&self, id: ShaderId) -> bool
     {
         self.handle.unload_shader(id)
     }
 
-    pub fn use_shader(&self, id: usize) -> bool
+    pub fn use_shader(&self, id: ShaderId) -> bool
     {
         self.handle.use_shader(id)
     }
 
-    pub fn set_shader_uniform(&self, id: usize, name: &str, val: UniformValue) -> bool
+    pub fn set_shader_uniform(&self, id: ShaderId, name: &str, val: UniformValue) -> bool
     {
         self.handle.set_shader_uniform(id, name, val)
     }
@@ -133,37 +157,37 @@ impl RendererInterface
         self.handle.clear_shader();
     }
 
-    pub fn is_shader_loaded(&self, id: usize) -> bool
+    pub fn is_shader_loaded(&self, id: ShaderId) -> bool
     {
         self.handle.is_shader_loaded(id)
     }
 
-    pub fn is_vbo_loaded(&self, id: usize) -> bool
+    pub fn is_vbo_loaded(&self, id: ModelId) -> bool
     {
         self.handle.is_vbo_loaded(id)
     }
 
-    pub fn is_ebo_loaded(&self, id: usize) -> bool
+    pub fn is_ebo_loaded(&self, id: ModelId) -> bool
     {
         self.handle.is_ebo_loaded(id)
     }
 
-    pub fn get_vbo(&self, id: usize) -> Option<Rc<Vbo<{glow::FLOAT}, f32>>>
+    pub fn get_vbo(&self, id: ModelId) -> Option<Rc<Vbo<{glow::FLOAT}, f32>>>
     {
         self.handle.get_vbo(id)
     }
 
-    pub fn get_ebo(&self, id: usize) -> Option<Rc<Ebo>>
+    pub fn get_ebo(&self, id: ModelId) -> Option<Rc<Ebo>>
     {
         self.handle.get_ebo(id)
     }
 
-    pub fn get_vao(&self, id: usize) -> Option<Rc<Vao>>
+    pub fn get_vao(&self, id: ModelId) -> Option<Rc<Vao>>
     {
         self.handle.get_vao(id)
     }
 
-    pub fn get_shader(&self, id: usize) -> Option<Rc<Shader>>
+    pub fn get_shader(&self, id: ShaderId) -> Option<Rc<Shader>>
     {
         self.handle.get_shader(id)
     }

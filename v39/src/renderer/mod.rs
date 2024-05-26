@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::math::*;
 use winit::window::Window;
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
@@ -9,8 +10,14 @@ use raw_window_handle::HasRawWindowHandle;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+mod id;
+pub use id::{ModelId, ShaderId, TextureId};
+
 mod ebo;
 pub use ebo::Ebo;
+
+mod model;
+pub use model::Model;
 
 mod texture;
 pub use texture::{Texture, TexParam};
@@ -35,11 +42,12 @@ pub(crate) struct Renderer
     window: Arc<Window>,
     ctx: Mutex<Context>,
     rctx: Mutex<GlContext>,
-    shaders: Mutex<HashMap<usize, Rc<Shader>>>,
-    vbos: Mutex<HashMap<usize, Rc<Vbo<{glow::FLOAT}, f32>>>>,
-    vaos: Mutex<HashMap<usize, Rc<Vao>>>,
-    ebos: Mutex<HashMap<usize, Rc<Ebo>>>,
-    textures: Mutex<HashMap<usize, Rc<Texture>>>,
+    shaders: Mutex<HashMap<ShaderId, Rc<Shader>>>,
+    vbos: Mutex<HashMap<ModelId, Rc<Vbo<{glow::FLOAT}, f32>>>>,
+    vaos: Mutex<HashMap<ModelId, Rc<Vao>>>,
+    ebos: Mutex<HashMap<ModelId, Rc<Ebo>>>,
+    textures: Mutex<HashMap<TextureId, Rc<Texture>>>,
+    models: Mutex<HashMap<ModelId, Rc<Model>>>,
 }
 
 
@@ -62,8 +70,11 @@ impl Renderer
             vaos: Mutex::new(HashMap::default()),
             ebos: Mutex::new(HashMap::default()),
             textures: Mutex::new(HashMap::default()),
+            models: Mutex::new(HashMap::default()),
         };
         
+        renderer.exec_gl(|gl| unsafe {gl.enable(glow::DEPTH_TEST); Ok(())});
+
         if INSTANCE.set(renderer).is_err()
         {
             return Err(V39Error::Reinit("Renderer".into()));
@@ -83,7 +94,61 @@ impl Renderer
         result
     }
 
-    pub fn load_texture(&self, id: usize, texture: Texture) -> bool
+    pub fn load_model(&self, model: Model) -> Option<ModelId>
+    {
+        let id = model.id();
+        let mut models = self.models.lock().unwrap();
+
+        if models.contains_key(&id)
+        {
+            return None;
+        }
+
+        models.insert(id, Rc::new(model));
+        Some(id)
+    }
+
+    pub fn unload_model(&self, id: ModelId) -> bool
+    {
+        self.models.lock().unwrap().remove(&id).is_some()
+    }
+
+    pub fn use_model(&self, id: ModelId) -> Option<u32>
+    {
+        if let Some(model) = self.get_model(id)
+        {
+            if let Some(shader) = self.get_shader(model.shader())
+            {
+                let aspect = self.window.inner_size().width as f32 / self.window.inner_size().height as f32;
+
+                let model = model.get_transform();
+                let view = Mat4::identity().append_translation(&Vec3::new(0.0, -0.5, -2.0));
+                let proj = glm::perspective(aspect, 1.57, 0.1, 100.0);
+
+                shader.set_uniform("model", UniformValue::Mat4(model));
+                shader.set_uniform("view", UniformValue::Mat4(view));
+                shader.set_uniform("proj", UniformValue::Mat4(proj));
+            }
+
+            let count = self.use_vao(model.id());
+
+            for (texture, sampler, name) in model.textures()
+            {
+                self.use_texture(*texture, *sampler, model.shader(), name);
+            }
+
+            return count;
+        }
+
+        None
+    }
+
+    pub fn get_model(&self, id: ModelId) -> Option<Rc<Model>>
+    {
+        self.models.lock().unwrap().get(&id).cloned()
+    }
+
+    pub fn load_texture(&self, id: TextureId, texture: Texture) -> bool
     {
         let mut textures = self.textures.lock().unwrap();
 
@@ -97,12 +162,12 @@ impl Renderer
         true
     }
 
-    pub fn unload_texture(&self, id: usize) -> bool
+    pub fn unload_texture(&self, id: TextureId) -> bool
     {
         self.textures.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_texture(&self, id: usize, unit: u32, shader: usize, sampler_name: &str) -> bool
+    pub fn use_texture(&self, id: TextureId, unit: u32, shader: ShaderId, sampler_name: &str) -> bool
     {
         if let Some(texture) = self.textures.lock().unwrap().get(&id)
         {
@@ -144,12 +209,12 @@ impl Renderer
         });
     }
 
-    pub fn get_texture(&self, id: usize) -> Option<Rc<Texture>>
+    pub fn get_texture(&self, id: TextureId) -> Option<Rc<Texture>>
     {
         self.textures.lock().unwrap().get(&id).cloned()
     }
 
-    pub fn load_vbo(&self, id: usize, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
+    pub fn load_vbo(&self, id: ModelId, vbo: Vbo<{glow::FLOAT}, f32>) -> bool
     {
         let mut vbos = self.vbos.lock().unwrap();
 
@@ -163,12 +228,12 @@ impl Renderer
         true
     }
 
-    pub fn unload_vbo(&self, id: usize) -> bool
+    pub fn unload_vbo(&self, id: ModelId) -> bool
     {
         self.vbos.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_vbo(&self, id: usize) -> bool
+    pub fn use_vbo(&self, id: ModelId) -> bool
     {
         if let Some(vbo) = self.vbos.lock().unwrap().get(&id)
         {
@@ -183,7 +248,7 @@ impl Renderer
         false
     }
 
-    pub fn load_ebo(&self, id: usize, ebo: Ebo) -> bool
+    pub fn load_ebo(&self, id: ModelId, ebo: Ebo) -> bool
     {
         let mut ebos = self.ebos.lock().unwrap();
 
@@ -197,12 +262,12 @@ impl Renderer
         true
     }
 
-    pub fn unload_ebo(&self, id: usize) -> bool
+    pub fn unload_ebo(&self, id: ModelId) -> bool
     {
         self.ebos.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_ebo(&self, id: usize) -> bool
+    pub fn use_ebo(&self, id: ModelId) -> bool
     {
         if let Some(ebo) = self.ebos.lock().unwrap().get(&id)
         {
@@ -217,7 +282,7 @@ impl Renderer
         false
     }
 
-    pub fn load_vao(&self, id: usize, vao: Vao) -> bool
+    pub fn load_vao(&self, id: ModelId, vao: Vao) -> bool
     {
         let mut vaos = self.vaos.lock().unwrap();
 
@@ -231,12 +296,12 @@ impl Renderer
         true
     }
 
-    pub fn unload_vao(&self, id: usize) -> bool
+    pub fn unload_vao(&self, id: ModelId) -> bool
     {
         self.vaos.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_vao(&self, id: usize) -> Option<u32>
+    pub fn use_vao(&self, id: ModelId) -> Option<u32>
     {
         if let Some(vao) = self.vaos.lock().unwrap().get(&id)
         {
@@ -278,7 +343,7 @@ impl Renderer
         });
     }
 
-    pub fn load_shader(&self, id: usize, shader: Shader) -> bool
+    pub fn load_shader(&self, id: ShaderId, shader: Shader) -> bool
     {
         let mut shaders = self.shaders.lock().unwrap();
 
@@ -292,12 +357,12 @@ impl Renderer
         true
     }
 
-    pub fn unload_shader(&self, id: usize) -> bool
+    pub fn unload_shader(&self, id: ShaderId) -> bool
     {
         self.shaders.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_shader(&self, id: usize) -> bool
+    pub fn use_shader(&self, id: ShaderId) -> bool
     {
         if let Some(shader) = self.shaders.lock().unwrap().get(&id)
         {
@@ -312,7 +377,7 @@ impl Renderer
         false
     }
 
-    pub fn set_shader_uniform(&self, id: usize, name: &str, val: UniformValue) -> bool
+    pub fn set_shader_uniform(&self, id: ShaderId, name: &str, val: UniformValue) -> bool
     {
         if let Some(shader) = self.shaders.lock().unwrap().get(&id)
         {
@@ -330,37 +395,37 @@ impl Renderer
         });
     }
 
-    pub fn is_shader_loaded(&self, id: usize) -> bool
+    pub fn is_shader_loaded(&self, id: ShaderId) -> bool
     {
         self.shaders.lock().unwrap().contains_key(&id)
     }
 
-    pub fn is_vbo_loaded(&self, id: usize) -> bool
+    pub fn is_vbo_loaded(&self, id: ModelId) -> bool
     {
         self.vbos.lock().unwrap().contains_key(&id)
     }
 
-    pub fn is_ebo_loaded(&self, id: usize) -> bool
+    pub fn is_ebo_loaded(&self, id: ModelId) -> bool
     {
         self.ebos.lock().unwrap().contains_key(&id)
     }
 
-    pub fn get_vbo(&self, id: usize) -> Option<Rc<Vbo<{glow::FLOAT}, f32>>>
+    pub fn get_vbo(&self, id: ModelId) -> Option<Rc<Vbo<{glow::FLOAT}, f32>>>
     {
         self.vbos.lock().unwrap().get(&id).cloned()
     }
 
-    pub fn get_ebo(&self, id: usize) -> Option<Rc<Ebo>>
+    pub fn get_ebo(&self, id: ModelId) -> Option<Rc<Ebo>>
     {
         self.ebos.lock().unwrap().get(&id).cloned()
     }
 
-    pub fn get_vao(&self, id: usize) -> Option<Rc<Vao>>
+    pub fn get_vao(&self, id: ModelId) -> Option<Rc<Vao>>
     {
         self.vaos.lock().unwrap().get(&id).cloned()
     }
 
-    pub fn get_shader(&self, id: usize) -> Option<Rc<Shader>>
+    pub fn get_shader(&self, id: ShaderId) -> Option<Rc<Shader>>
     {
         self.shaders.lock().unwrap().get(&id).cloned()
     }
@@ -388,12 +453,13 @@ impl Renderer
     pub(crate) fn begin_frame(&self)
     {
         let _ = self.exec_gl(|gl| unsafe {
-            gl.clear_color(0.5, 0.5, 1.0, 1.0);
-            gl.clear(glow::COLOR_BUFFER_BIT);
+            gl.clear_color(0.5/4.0, 0.5/4.0, 1.0/4.0, 1.0);
+            gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
             Ok(())
         });
     }
 }
+
 
 unsafe impl Sync for Renderer {}
 unsafe impl Send for Renderer {}

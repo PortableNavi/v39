@@ -18,7 +18,12 @@ pub use crate::renderer::{
     UniformValue,
     Texture,
     TexParam,
+    Model,
+    ModelId,
+    ShaderId,
+    TextureId,
 };
+
 
 pub type V39Result<T> = Result<T, V39Error>;
 
