@@ -73,7 +73,13 @@ impl Renderer
             models: Mutex::new(HashMap::default()),
         };
         
-        renderer.exec_gl(|gl| unsafe {gl.enable(glow::DEPTH_TEST); Ok(())});
+        renderer.exec_gl(|gl| unsafe {
+            gl.enable(glow::DEPTH_TEST);
+            gl.enable(2896);
+            gl.enable(16384);
+            gl.enable(2977);
+            Ok(())
+        });
 
         if INSTANCE.set(renderer).is_err()
         {
@@ -122,8 +128,9 @@ impl Renderer
                 let aspect = self.window.inner_size().width as f32 / self.window.inner_size().height as f32;
 
                 let model = model.get_transform();
-                let view = Mat4::identity().append_translation(&Vec3::new(0.0, -0.5, -2.0));
-                let proj = glm::perspective(aspect, 1.57, 0.1, 100.0);
+                let view = Mat4::identity().append_translation(&Vec3::new(0.0, -0.5, -20.0));
+
+                let proj = glm::perspective(aspect, 1.57, 0.001, 10000.0);
 
                 shader.set_uniform("model", UniformValue::Mat4(model));
                 shader.set_uniform("view", UniformValue::Mat4(view));
@@ -136,6 +143,8 @@ impl Renderer
             {
                 self.use_texture(*texture, *sampler, model.shader(), name);
             }
+
+            self.use_shader(model.shader());
 
             return count;
         }
@@ -453,7 +462,7 @@ impl Renderer
     pub(crate) fn begin_frame(&self)
     {
         let _ = self.exec_gl(|gl| unsafe {
-            gl.clear_color(0.5/4.0, 0.5/4.0, 1.0/4.0, 1.0);
+            gl.clear_color(0.5/6.0, 0.5/6.0, 1.0/6.0, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
             Ok(())
         });

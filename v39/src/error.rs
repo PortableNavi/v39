@@ -21,6 +21,9 @@ pub enum V39Error
 
     #[error("{0}")]
     Error(String),
+
+    #[error("{0}")]
+    IO(#[from] std::io::Error),
 }
 
 

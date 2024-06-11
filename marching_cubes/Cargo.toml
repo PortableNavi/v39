@@ -1,0 +1,17 @@
+[package]
+name = "marching_cubes"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+v39 = {path="../v39/"}
+math = {path="../math"}
+serde = {version="1.0.203", features=["derive"]}
+rmp-serde = "1.3.0"
+once_cell = "1.19.0"
+
+
+[build-dependencies]
+math = {path="../math"}
+serde = {version="1.0.203", features=["derive"]}
+rmp-serde = "1.3.0"

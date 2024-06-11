@@ -15,5 +15,5 @@ void main()
   color = in_color;
   coord = in_coord;
 
-  gl_Position = proj * view * model *  vec4(in_pos, 1.0);
+  gl_Position = proj * view * model * vec4(in_pos, 1.0);
 }

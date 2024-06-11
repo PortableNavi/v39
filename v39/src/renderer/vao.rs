@@ -39,7 +39,7 @@ impl Vao
             {
                 VboFormat::Position(psize) => {
                     gl.enable_vertex_attrib_array(0);
-                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, 0, 0);
+                    gl.vertex_attrib_pointer_f32(0, psize, vbo_obj.kind(), false, 4*psize, 0);
                 },
 
                 VboFormat::PositionColor(psize, csize) => {

@@ -1,3 +1,3 @@
 [workspace]
-members = [ "gl-test","sample_app", "v39"]
+members = [ "gl-test", "marching_cubes","sample_app", "v39", "math"]
 resolver = "2"
