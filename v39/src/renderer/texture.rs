@@ -55,6 +55,12 @@ impl Texture
         }
     }
 
+    pub fn from_bytes(bytes: &[u8]) -> V39Result<Self>
+    {
+        let data = image::load_from_memory(bytes)?.into_rgba8();
+        Self::new(&data, data.width(), data.height())
+    }
+
     pub fn from_file(path: impl AsRef<std::path::Path>) -> V39Result<Self>
     {
         let data = image::open(path)?.into_rgba8();

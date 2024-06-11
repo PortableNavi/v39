@@ -22,6 +22,7 @@ pub use crate::renderer::{
     ModelId,
     ShaderId,
     TextureId,
+    Camera,
 };
 
 
