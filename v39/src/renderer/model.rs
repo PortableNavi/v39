@@ -68,7 +68,7 @@ impl Model
 
     pub fn get_transform(&self) -> Mat4
     {
-        self.transform.lock().unwrap().clone()
+        *self.transform.lock().unwrap()
     }
 }
 

@@ -41,14 +41,14 @@ impl EventReceiver for App
             let mut translation = glm::Vec3::new(0.0, 0.0, 0.0);
             let mut rotation = glm::Vec3::new(0.0, 0.0, 0.0);
 
-            if i.is_held(input::V39Key::W) {translation.z += cam_speed * delta}
-            if i.is_held(input::V39Key::S) {translation.z -= cam_speed * delta}
-            if i.is_held(input::V39Key::A) {translation.x += cam_speed * delta}
-            if i.is_held(input::V39Key::D) {translation.x -= cam_speed * delta}
-            if i.is_held(input::V39Key::Shift) {translation.y += cam_speed * delta}
-            if i.is_held(input::V39Key::Space) {translation.y -= cam_speed * delta}
-            if i.is_held(input::V39Key::Q) {rotation.z += cam_speed * delta};
-            if i.is_held(input::V39Key::E) {rotation.z -= cam_speed * delta};
+            if i.is_held(input::V39Key::W)      {translation.z += cam_speed * delta}
+            if i.is_held(input::V39Key::S)      {translation.z -= cam_speed * delta}
+            if i.is_held(input::V39Key::A)      {translation.x += cam_speed * delta}
+            if i.is_held(input::V39Key::D)      {translation.x -= cam_speed * delta}
+            if i.is_held(input::V39Key::Shift)  {translation.y += cam_speed * delta}
+            if i.is_held(input::V39Key::Space)  {translation.y -= cam_speed * delta}
+            if i.is_held(input::V39Key::Q)      {rotation.z += cam_speed * delta};
+            if i.is_held(input::V39Key::E)      {rotation.z -= cam_speed * delta};
 
             self.cam.transform_view(|v|{v.append_translation(&translation)});
         }
@@ -87,7 +87,7 @@ fn model_setup() -> V39Result<Option<ModelId>>
 
     let shader_id = renderer.load_shader(shader);
 
-    let texture = Texture::from_bytes(include_bytes!("../textures/doggo.png"))?;
+    let texture = Texture::from_bytes(include_bytes!("../textures/miku.png"))?;
     texture.set_params(&[
         (glow::TEXTURE_MIN_FILTER, TexParam::U32(glow::NEAREST)),
         (glow::TEXTURE_MAG_FILTER, TexParam::U32(glow::NEAREST)),
