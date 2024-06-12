@@ -56,7 +56,7 @@ impl EventReceiver for App
 
 fn main() -> V39Result<()>
 {
-    let props = InitProps {title: "Doggo Verse".into(), ..InitProps::default()};
+    let props = InitProps {title: "GL Test".into(), ..InitProps::default()};
     let app = v39::init(&props)?;
 
     app.event_handler().add_receiver(App::default());
