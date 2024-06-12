@@ -6,7 +6,7 @@ static SHADER_ID: AtomicU32 = AtomicU32::new(0);
 static TEXTURE_ID: AtomicU32 = AtomicU32::new(0);
 
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash, Default)]
 pub struct ModelId(pub u32);
 impl ModelId
 {
@@ -17,7 +17,7 @@ impl ModelId
 }
 
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash, Default)]
 pub struct ShaderId(pub u32);
 impl ShaderId
 {
@@ -28,7 +28,7 @@ impl ShaderId
 }
 
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash, Default)]
 pub struct TextureId(pub u32);
 impl TextureId
 {

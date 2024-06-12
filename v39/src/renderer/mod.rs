@@ -28,6 +28,9 @@ pub use vbo::{Vbo, VboFormat};
 mod vao;
 pub use vao::Vao;
 
+mod camera;
+pub use camera::Camera;
+
 mod shader;
 pub use shader::{Shader, ShaderSource, ShaderKind, UniformValue};
 
@@ -119,7 +122,7 @@ impl Renderer
         self.models.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_model(&self, id: ModelId) -> Option<u32>
+    pub fn use_model(&self, id: ModelId, camera: &Camera) -> Option<u32>
     {
         if let Some(model) = self.get_model(id)
         {
@@ -128,9 +131,8 @@ impl Renderer
                 let aspect = self.window.inner_size().width as f32 / self.window.inner_size().height as f32;
 
                 let model = model.get_transform();
-                let view = Mat4::identity().append_translation(&Vec3::new(0.0, -0.5, -20.0));
-
-                let proj = glm::perspective(aspect, 1.57, 0.001, 10000.0);
+                let view = camera.view();
+                let proj = camera.proj(aspect);
 
                 shader.set_uniform("model", UniformValue::Mat4(model));
                 shader.set_uniform("view", UniformValue::Mat4(view));
@@ -150,6 +152,21 @@ impl Renderer
         }
 
         None
+    }
+
+    pub fn draw_model(&self, id: ModelId, camera: &Camera) -> bool
+    {
+        if let Some(count) = self.use_model(id, camera)
+        {
+            let _ = self.exec_gl(|gl| unsafe {
+                gl.draw_elements(glow::TRIANGLES, count as i32, glow::UNSIGNED_INT, 0); 
+                Ok(())}
+            );
+            
+            return true;
+        }
+
+        false
     }
 
     pub fn get_model(&self, id: ModelId) -> Option<Rc<Model>>

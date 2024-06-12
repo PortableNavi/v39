@@ -28,9 +28,14 @@ impl RendererInterface
         self.handle.unload_model(id)
     }
 
-    pub fn use_model(&self, id: ModelId) -> Option<i32>
+    pub fn use_model(&self, id: ModelId, cam: &Camera) -> Option<i32>
     {
-        self.handle.use_model(id).map(|id| id as i32)
+        self.handle.use_model(id, cam).map(|id| id as i32)
+    }
+
+    pub fn draw_model(&self, id: ModelId, cam: &Camera) -> bool
+    {
+        self.handle.draw_model(id, cam)
     }
 
     pub fn get_model(&self, id: ModelId) -> Option<Rc<Model>>
