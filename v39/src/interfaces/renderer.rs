@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use crate::renderer::Renderer;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::rc::Rc;
 
 
@@ -18,6 +18,11 @@ impl RendererInterface
         Ok(Self {handle: Renderer::init(window)?})
     }
 
+    pub fn set_camera(&self, camera: Arc<Mutex<Camera>>)
+    {
+        self.handle.set_camera(camera)
+    }
+
     pub fn load_model(&self, model: Model) -> Option<ModelId>
     {
         self.handle.load_model(model)
@@ -28,14 +33,14 @@ impl RendererInterface
         self.handle.unload_model(id)
     }
 
-    pub fn use_model(&self, id: ModelId, cam: &Camera) -> Option<i32>
+    pub fn use_model(&self, id: ModelId) -> Option<i32>
     {
-        self.handle.use_model(id, cam).map(|id| id as i32)
+        self.handle.use_model(id).map(|id| id as i32)
     }
 
-    pub fn draw_model(&self, id: ModelId, cam: &Camera) -> bool
+    pub fn draw_model(&self, id: ModelId) -> bool
     {
-        self.handle.draw_model(id, cam)
+        self.handle.draw_model(id)
     }
 
     pub fn get_model(&self, id: ModelId) -> Option<Rc<Model>>

@@ -51,6 +51,7 @@ pub(crate) struct Renderer
     ebos: Mutex<HashMap<ModelId, Rc<Ebo>>>,
     textures: Mutex<HashMap<TextureId, Rc<Texture>>>,
     models: Mutex<HashMap<ModelId, Rc<Model>>>,
+    camera: Mutex<Arc<Mutex<Camera>>>,
 }
 
 
@@ -74,6 +75,7 @@ impl Renderer
             ebos: Mutex::new(HashMap::default()),
             textures: Mutex::new(HashMap::default()),
             models: Mutex::new(HashMap::default()),
+            camera: Mutex::new(Arc::new(Mutex::new(Camera::default()))),
         };
         
         renderer.exec_gl(|gl| unsafe {
@@ -103,6 +105,11 @@ impl Renderer
         result
     }
 
+    pub fn set_camera(&self, camera: Arc<Mutex<Camera>>)
+    {
+        *self.camera.lock().unwrap() = camera
+    }
+
     pub fn load_model(&self, model: Model) -> Option<ModelId>
     {
         let id = model.id();
@@ -122,17 +129,19 @@ impl Renderer
         self.models.lock().unwrap().remove(&id).is_some()
     }
 
-    pub fn use_model(&self, id: ModelId, camera: &Camera) -> Option<u32>
+    pub fn use_model(&self, id: ModelId) -> Option<u32>
     {
         if let Some(model) = self.get_model(id)
         {
             if let Some(shader) = self.get_shader(model.shader())
             {
-                let aspect = self.window.inner_size().width as f32 / self.window.inner_size().height as f32;
+
+                let camera = self.camera.lock().unwrap();
+                let camera = camera.lock().unwrap();
 
                 let model = model.get_transform();
                 let view = camera.view();
-                let proj = camera.proj(aspect);
+                let proj = camera.proj();
 
                 shader.set_uniform("model", UniformValue::Mat4(model));
                 shader.set_uniform("view", UniformValue::Mat4(view));
@@ -154,9 +163,9 @@ impl Renderer
         None
     }
 
-    pub fn draw_model(&self, id: ModelId, camera: &Camera) -> bool
+    pub fn draw_model(&self, id: ModelId) -> bool
     {
-        if let Some(count) = self.use_model(id, camera)
+        if let Some(count) = self.use_model(id)
         {
             let _ = self.exec_gl(|gl| unsafe {
                 gl.draw_elements(glow::TRIANGLES, count as i32, glow::UNSIGNED_INT, 0); 
